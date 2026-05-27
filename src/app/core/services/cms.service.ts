@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { delay, of } from 'rxjs';
-import { CmsPayload } from '../models/content.model';
+import { CmsPayload } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class CmsService {
