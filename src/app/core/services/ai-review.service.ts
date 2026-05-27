@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { delay, of } from 'rxjs';
-import { AiSuggestion, ContentForm } from '../models/content.model';
+import { AiSuggestion, ContentForm } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class AiReviewService {
