@@ -5,8 +5,16 @@
     <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
       Home
     </a>
-    <a routerLink="/tasks" routerLinkActive="is-active">Tasks</a>
-    <a routerLink="/tasks/new" routerLinkActive="is-active">Nova task</a>
+    <a routerLink="/tasks" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
+      Tasks
+    </a>
+    <a
+      routerLink="/tasks/new"
+      routerLinkActive="is-active"
+      [routerLinkActiveOptions]="{ exact: true }"
+    >
+      Nova task
+    </a>
   </nav>
 </header>
 
