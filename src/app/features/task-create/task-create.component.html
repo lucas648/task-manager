@@ -1,0 +1,49 @@
+<main class="task-shell">
+  <header class="screen-header">
+    <div>
+      <p class="eyebrow">Cadastro</p>
+      <h1>Inserir nova task</h1>
+    </div>
+
+    <a class="secondary-action action-link" routerLink="/tasks">Ver lista completa</a>
+  </header>
+
+  <section class="task-form-panel" aria-label="Nova task">
+    <form [formGroup]="taskForm" (ngSubmit)="addTask()" novalidate>
+      <label class="field">
+        <span>Task</span>
+        <input
+          type="text"
+          formControlName="title"
+          placeholder="Ex.: Revisar briefing do cliente"
+          autocomplete="off"
+        />
+      </label>
+
+      <label class="field field-wide">
+        <span>Detalhes</span>
+        <input
+          type="text"
+          formControlName="description"
+          placeholder="Contexto, prazo ou responsavel"
+          autocomplete="off"
+        />
+      </label>
+
+      <label class="field field-status">
+        <span>Status inicial</span>
+        <select formControlName="status">
+          @for (option of statusOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      <button class="primary-action" type="submit">Salvar task</button>
+    </form>
+
+    @if (taskForm.controls.title.invalid && taskForm.controls.title.touched) {
+      <p class="form-error">Informe um titulo com pelo menos 3 caracteres.</p>
+    }
+  </section>
+</main>
