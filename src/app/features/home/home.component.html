@@ -1,0 +1,40 @@
+<main class="task-shell">
+  <section class="home-hero">
+    <div>
+      <p class="eyebrow">Fluxo de tarefas</p>
+      <h1>Task Manager</h1>
+      <p class="hero-copy">
+        Acompanhe o volume de trabalho e escolha o proximo fluxo: consultar a lista completa
+        ou cadastrar uma nova task.
+      </p>
+    </div>
+
+    <div class="home-actions" aria-label="Acoes principais">
+      <a class="primary-action action-link" routerLink="/tasks">Ver lista completa</a>
+      <a class="secondary-action action-link" routerLink="/tasks/new">Inserir nova task</a>
+    </div>
+  </section>
+
+  <dl class="summary-strip home-summary" aria-label="Resumo das tasks">
+    <div>
+      <dt>Total</dt>
+      <dd>{{ taskService.totalTasks() }}</dd>
+    </div>
+    @for (column of columns; track column.status) {
+      <div>
+        <dt>{{ column.label }}</dt>
+        <dd>{{ taskService.countByStatus(column.status) }}</dd>
+      </div>
+    }
+  </dl>
+
+  <section class="status-overview" aria-label="Resumo por status">
+    @for (column of columns; track column.status) {
+      <article class="status-card" [class]="column.status">
+        <span>{{ column.caption }}</span>
+        <strong>{{ taskService.countByStatus(column.status) }}</strong>
+        <p>{{ column.label }}</p>
+      </article>
+    }
+  </section>
+</main>
