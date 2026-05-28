@@ -1,1 +1,389 @@
-/* You can add global styles to this file, and also import other style files */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: #f5f7fb;
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  color: #17202a;
+  background: #f5f7fb;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.task-shell {
+  width: min(1440px, 100%);
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.app-header {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(420px, 680px);
+  gap: 24px;
+  align-items: end;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #dce3ee;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #5f6f86;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  color: #101828;
+  font-size: 2.5rem;
+  line-height: 1.05;
+}
+
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.summary-strip div {
+  min-height: 74px;
+  padding: 14px;
+  border: 1px solid #dce3ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.summary-strip dt {
+  color: #617086;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.summary-strip dd {
+  margin: 6px 0 0;
+  color: #101828;
+  font-size: 1.7rem;
+  font-weight: 800;
+}
+
+.task-intake {
+  padding: 22px 0;
+  border-bottom: 1px solid #dce3ee;
+}
+
+form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) minmax(260px, 1.3fr) minmax(150px, 0.5fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.field,
+.search-field,
+.status-select {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.field span,
+.search-field span,
+.status-select span {
+  color: #44546a;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+input,
+select {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  border: 1px solid #c8d2df;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17202a;
+  outline: none;
+  padding: 0 12px;
+}
+
+input:focus,
+select:focus {
+  border-color: #1d7a8c;
+  box-shadow: 0 0 0 3px rgba(29, 122, 140, 0.16);
+}
+
+.primary-action {
+  height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: #1d7a8c;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+
+.primary-action:hover {
+  background: #176878;
+}
+
+.form-error {
+  margin: 10px 0 0;
+  color: #b42318;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  justify-content: space-between;
+  padding: 18px 0;
+}
+
+.segmented-control {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #d2dbe7;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.segmented-control button {
+  min-width: 112px;
+  height: 36px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #4b5c73;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.segmented-control button.is-active {
+  background: #17202a;
+  color: #ffffff;
+}
+
+.search-field {
+  width: min(360px, 100%);
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.task-column {
+  min-width: 0;
+  min-height: 420px;
+  border: 1px solid #dce3ee;
+  border-radius: 8px;
+  background: #eef3f8;
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 76px;
+  padding: 16px;
+  border-bottom: 1px solid #dce3ee;
+}
+
+.column-header p {
+  margin: 0;
+  color: #17202a;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.column-header span {
+  display: block;
+  margin-top: 3px;
+  color: #65758b;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.column-header strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.95rem;
+}
+
+.pending .column-header strong {
+  background: #b54708;
+}
+
+.in_progress .column-header strong {
+  background: #175cd3;
+}
+
+.done .column-header strong {
+  background: #067647;
+}
+
+.task-list {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.task-card {
+  display: grid;
+  gap: 12px;
+  min-height: 186px;
+  padding: 14px;
+  border: 1px solid #d7e0eb;
+  border-left: 5px solid #b54708;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.in_progress .task-card {
+  border-left-color: #175cd3;
+}
+
+.done .task-card {
+  border-left-color: #067647;
+}
+
+.task-card.is-done h2 {
+  color: #526274;
+  text-decoration: line-through;
+}
+
+.task-card-header {
+  display: grid;
+  grid-template-columns: 1fr 32px;
+  gap: 8px;
+  align-items: start;
+}
+
+.task-card h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #17202a;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d2dbe7;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #7a2e0e;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.icon-button:hover {
+  border-color: #f2b8a8;
+  background: #fff4f0;
+}
+
+.task-description {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #44546a;
+  line-height: 1.45;
+}
+
+.task-meta {
+  display: grid;
+  gap: 4px;
+  color: #6b7a90;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.status-select {
+  align-self: end;
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 128px;
+  margin: 0;
+  border: 1px dashed #c4cfdd;
+  border-radius: 8px;
+  color: #637187;
+  font-weight: 800;
+}
+
+@media (max-width: 1100px) {
+  .app-header,
+  .board,
+  form {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .segmented-control {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .segmented-control button,
+  .search-field {
+    width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  .task-shell {
+    padding: 18px;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  .summary-strip,
+  .segmented-control {
+    grid-template-columns: 1fr;
+  }
+}
