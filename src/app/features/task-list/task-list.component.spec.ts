@@ -1,34 +1,54 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Task, TaskFilter, TaskStatus } from '../../core/models/task.model';
+import { Task, TaskFilter, TaskPriority, TaskStatus } from '../../core/models/task.model';
 import { TaskService } from '../../core/services/task.service';
 import { TaskListComponent } from './task-list.component';
 
 const LIST_TASKS: Task[] = [
   {
-    id: 'pending',
+    id: 'draft',
     title: 'Planejar backlog',
     description: 'Organizar prioridades',
-    status: 'pending',
+    priority: TaskPriority.Medium,
+    status: TaskStatus.Draft,
+    category: 'Produto',
+    tags: ['backlog'],
+    assignee: 'Lucas',
+    acceptanceCriteria: ['Prioridades revisadas'],
     createdAt: '2026-05-29T08:00:00.000Z',
     updatedAt: '2026-05-29T08:00:00.000Z',
+    aiSuggestions: [],
+    auditLogs: [{ id: 'audit-draft' } as Task['auditLogs'][number]],
   },
   {
     id: 'progress',
     title: 'Implementar API',
     description: 'Backend de tasks',
-    status: 'in_progress',
+    priority: TaskPriority.High,
+    status: TaskStatus.InProgress,
+    category: 'Engenharia',
+    tags: ['backend'],
+    dueDate: '2026-06-01',
+    acceptanceCriteria: [],
     createdAt: '2026-05-29T09:00:00.000Z',
     updatedAt: '2026-05-29T09:00:00.000Z',
+    aiSuggestions: [],
+    auditLogs: [],
   },
   {
-    id: 'done',
+    id: 'completed',
     title: 'Publicar release',
     description: '',
-    status: 'done',
+    priority: TaskPriority.Low,
+    status: TaskStatus.Completed,
+    category: 'Release',
+    tags: [],
+    acceptanceCriteria: [],
     createdAt: '2026-05-29T10:00:00.000Z',
     updatedAt: '2026-05-29T10:00:00.000Z',
+    aiSuggestions: [],
+    auditLogs: [],
   },
 ];
 
@@ -81,7 +101,7 @@ describe('TaskListComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  it('renders every column and every task by default', () => {
+  it('renders primary workflow columns and task metadata by default', () => {
     const fixture = TestBed.createComponent(TaskListComponent);
     fixture.detectChanges();
 
@@ -89,29 +109,36 @@ describe('TaskListComponent', () => {
 
     expect(
       [...element.querySelectorAll('.column-header p')].map((node) => node.textContent?.trim()),
-    ).toEqual(['Pendentes', 'Em andamento', 'Concluidas']);
+    ).toEqual(['Draft', 'AI Reviewed', 'Approved', 'Published', 'In Progress', 'Completed']);
     expect(cardTitles(element)).toEqual([
       'Planejar backlog',
       'Implementar API',
       'Publicar release',
     ]);
-    expect(element.querySelectorAll('.task-description').length).toBe(2);
+    expect(element.textContent).toContain('Produto');
+    expect(element.textContent).toContain('Prioridades revisadas');
+    expect(element.textContent).toContain('1 logs de auditoria');
   });
 
-  it('filters tasks by status and search text', () => {
+  it('filters tasks by status and search text across enriched fields', () => {
     const fixture = TestBed.createComponent(TaskListComponent);
     const component = fixture.componentInstance as unknown as TaskListTestApi;
 
-    component.setFilter('in_progress');
+    component.setFilter(TaskStatus.InProgress);
     fixture.detectChanges();
-    expect(component.tasksByStatus('in_progress').map((task) => task.id)).toEqual(['progress']);
+    expect(component.tasksByStatus(TaskStatus.InProgress).map((task) => task.id)).toEqual([
+      'progress',
+    ]);
     expect(cardTitles(fixture.nativeElement as HTMLElement)).toEqual(['Implementar API']);
 
     component.setFilter('all');
     component.setSearch('  BACKEND  ');
     fixture.detectChanges();
-
     expect(cardTitles(fixture.nativeElement as HTMLElement)).toEqual(['Implementar API']);
+
+    component.setSearch('lucas');
+    fixture.detectChanges();
+    expect(cardTitles(fixture.nativeElement as HTMLElement)).toEqual(['Planejar backlog']);
   });
 
   it('shows empty states when filters remove every task', () => {
@@ -121,18 +148,18 @@ describe('TaskListComponent', () => {
     component.setSearch('sem resultado');
     fixture.detectChanges();
 
-    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.empty-state').length).toBe(3);
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.empty-state').length).toBe(6);
   });
 
   it('delegates status changes and deletions to the task service', () => {
     const fixture = TestBed.createComponent(TaskListComponent);
     const component = fixture.componentInstance as unknown as TaskListTestApi;
 
-    component.changeStatus('pending', 'done');
+    component.changeStatus('draft', TaskStatus.Completed);
     component.deleteTask('progress');
     fixture.detectChanges();
 
-    expect(taskService.changeStatus).toHaveBeenCalledWith('pending', 'done');
+    expect(taskService.changeStatus).toHaveBeenCalledWith('draft', TaskStatus.Completed);
     expect(taskService.deleteTask).toHaveBeenCalledWith('progress');
     expect(cardTitles(fixture.nativeElement as HTMLElement)).toEqual([
       'Planejar backlog',

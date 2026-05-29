@@ -1,34 +1,52 @@
 import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Task } from '../../core/models/task.model';
+import { Task, TaskPriority, TaskStatus } from '../../core/models/task.model';
 import { TaskService } from '../../core/services/task.service';
 import { HomeComponent } from './home.component';
 
 const HOME_TASKS: Task[] = [
   {
-    id: 'pending',
-    title: 'Pendente',
+    id: 'draft',
+    title: 'Draft',
     description: 'Aguardando inicio',
-    status: 'pending',
+    priority: TaskPriority.Medium,
+    status: TaskStatus.Draft,
+    category: 'Produto',
+    tags: [],
+    acceptanceCriteria: [],
     createdAt: '2026-05-29T08:00:00.000Z',
     updatedAt: '2026-05-29T08:00:00.000Z',
+    aiSuggestions: [],
+    auditLogs: [],
   },
   {
     id: 'progress',
     title: 'Em andamento',
     description: 'Trabalho ativo',
-    status: 'in_progress',
+    priority: TaskPriority.High,
+    status: TaskStatus.InProgress,
+    category: 'Delivery',
+    tags: [],
+    acceptanceCriteria: [],
     createdAt: '2026-05-29T09:00:00.000Z',
     updatedAt: '2026-05-29T09:00:00.000Z',
+    aiSuggestions: [],
+    auditLogs: [],
   },
   {
-    id: 'done',
+    id: 'completed',
     title: 'Concluida',
     description: 'Entrega registrada',
-    status: 'done',
+    priority: TaskPriority.Low,
+    status: TaskStatus.Completed,
+    category: 'Release',
+    tags: [],
+    acceptanceCriteria: [],
     createdAt: '2026-05-29T10:00:00.000Z',
     updatedAt: '2026-05-29T10:00:00.000Z',
+    aiSuggestions: [],
+    auditLogs: [],
   },
 ];
 
@@ -66,7 +84,7 @@ describe('HomeComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  it('renders the home title, navigation actions, and summary counts', () => {
+  it('renders the home title, navigation actions, and primary workflow counts', () => {
     const fixture = TestBed.createComponent(HomeComponent);
     fixture.detectChanges();
 
@@ -79,8 +97,8 @@ describe('HomeComponent', () => {
       text: link.textContent?.trim(),
     }));
 
-    expect(textContent(element)).toContain('Task Manager');
-    expect(summaryValues).toEqual(['3', '1', '1', '1']);
+    expect(textContent(element)).toContain('TaskFlow AI');
+    expect(summaryValues).toEqual(['3', '1', '0', '0', '0', '1', '1']);
     expect(links).toEqual([
       { href: '/tasks', text: 'Ver lista completa' },
       { href: '/tasks/new', text: 'Inserir nova task' },
@@ -96,10 +114,16 @@ describe('HomeComponent', () => {
       {
         id: 'new',
         title: 'Nova',
-        description: 'Mais uma pendente',
-        status: 'pending',
+        description: 'Mais uma draft',
+        priority: TaskPriority.Medium,
+        status: TaskStatus.Draft,
+        category: 'Produto',
+        tags: [],
+        acceptanceCriteria: [],
         createdAt: '2026-05-29T11:00:00.000Z',
         updatedAt: '2026-05-29T11:00:00.000Z',
+        aiSuggestions: [],
+        auditLogs: [],
       },
     ]);
     fixture.detectChanges();
@@ -108,6 +132,6 @@ describe('HomeComponent', () => {
       ...(fixture.nativeElement as HTMLElement).querySelectorAll('.summary-strip dd'),
     ].map((node) => node.textContent?.trim());
 
-    expect(summaryValues).toEqual(['4', '2', '1', '1']);
+    expect(summaryValues).toEqual(['4', '2', '0', '0', '0', '1', '1']);
   });
 });

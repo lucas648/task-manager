@@ -9,8 +9,8 @@
   </header>
 
   <section class="task-form-panel" aria-label="Nova task">
-    <form [formGroup]="taskForm" (ngSubmit)="addTask()" novalidate>
-      <label class="field">
+    <form class="task-form" [formGroup]="taskForm" (ngSubmit)="addTask()" novalidate>
+      <label class="field field-title">
         <span>Task</span>
         <input
           type="text"
@@ -20,23 +20,56 @@
         />
       </label>
 
-      <label class="field field-wide">
-        <span>Detalhes</span>
+      <label class="field field-status">
+        <span>Prioridade</span>
+        <select formControlName="priority">
+          @for (option of priorityOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field field-category">
+        <span>Categoria</span>
         <input
           type="text"
-          formControlName="description"
-          placeholder="Contexto, prazo ou responsavel"
+          formControlName="category"
+          placeholder="Ex.: Produto"
           autocomplete="off"
         />
       </label>
 
-      <label class="field field-status">
-        <span>Status inicial</span>
-        <select formControlName="status">
-          @for (option of statusOptions; track option.value) {
-            <option [value]="option.value">{{ option.label }}</option>
-          }
-        </select>
+      <label class="field field-third">
+        <span>Tags</span>
+        <input type="text" formControlName="tags" placeholder="bug, auth, ux" autocomplete="off" />
+      </label>
+
+      <label class="field field-third">
+        <span>Responsavel</span>
+        <input type="text" formControlName="assignee" placeholder="Opcional" autocomplete="off" />
+      </label>
+
+      <label class="field field-third">
+        <span>Prazo</span>
+        <input type="date" formControlName="dueDate" />
+      </label>
+
+      <label class="field field-wide">
+        <span>Detalhes</span>
+        <textarea
+          formControlName="description"
+          placeholder="Contexto, prazo ou responsavel"
+          autocomplete="off"
+        ></textarea>
+      </label>
+
+      <label class="field field-wide">
+        <span>Criterios de aceite</span>
+        <textarea
+          formControlName="acceptanceCriteria"
+          placeholder="Um criterio por linha"
+          autocomplete="off"
+        ></textarea>
       </label>
 
       <button class="primary-action" type="submit">Salvar task</button>
@@ -44,6 +77,10 @@
 
     @if (taskForm.controls.title.invalid && taskForm.controls.title.touched) {
       <p class="form-error">Informe um titulo com pelo menos 3 caracteres.</p>
+    } @else if (taskForm.controls.description.invalid && taskForm.controls.description.touched) {
+      <p class="form-error">Informe uma descricao para a task.</p>
+    } @else if (taskForm.controls.category.invalid && taskForm.controls.category.touched) {
+      <p class="form-error">Informe uma categoria.</p>
     }
   </section>
 </main>
