@@ -31,7 +31,8 @@ export class TaskListComponent {
 
     return this.taskService.tasks().filter((task) => {
       const matchesStatus = selectedFilter === 'all' || task.status === selectedFilter;
-      const searchableText = `${task.title} ${task.description}`.toLowerCase();
+      const searchableText =
+        `${task.title} ${task.description} ${task.category} ${task.tags.join(' ')} ${task.assignee ?? ''}`.toLowerCase();
       const matchesSearch = !term || searchableText.includes(term);
 
       return matchesStatus && matchesSearch;

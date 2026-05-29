@@ -47,7 +47,7 @@
 
         <div class="task-list">
           @for (task of tasksByStatus(column.status); track task.id) {
-            <article class="task-card" [class.is-done]="task.status === 'done'">
+            <article class="task-card" [class.is-done]="task.status === 'completed'">
               <div class="task-card-header">
                 <h2>{{ task.title }}</h2>
                 <button
@@ -65,9 +65,37 @@
                 <p class="task-description">{{ task.description }}</p>
               }
 
+              <div class="task-tags" aria-label="Metadados da task">
+                <span>{{ task.priority }}</span>
+                <span>{{ task.category }}</span>
+                @if (task.assignee) {
+                  <span>{{ task.assignee }}</span>
+                }
+                @if (task.dueDate) {
+                  <span>{{ task.dueDate | date: 'dd/MM/yyyy' }}</span>
+                }
+              </div>
+
+              @if (task.tags.length) {
+                <div class="task-tags" aria-label="Tags">
+                  @for (tag of task.tags; track tag) {
+                    <span>{{ tag }}</span>
+                  }
+                </div>
+              }
+
+              @if (task.acceptanceCriteria.length) {
+                <ul class="criteria-list">
+                  @for (criterion of task.acceptanceCriteria; track criterion) {
+                    <li>{{ criterion }}</li>
+                  }
+                </ul>
+              }
+
               <div class="task-meta">
                 <span>Criada {{ task.createdAt | date: 'dd/MM HH:mm' }}</span>
                 <span>Atualizada {{ task.updatedAt | date: 'dd/MM HH:mm' }}</span>
+                <span>{{ task.auditLogs.length }} logs de auditoria</span>
               </div>
 
               <label class="status-select">

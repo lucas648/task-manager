@@ -37,7 +37,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.brand')?.textContent).toContain('Task Manager');
+    expect(compiled.querySelector('.brand')?.textContent).toContain('TaskFlow AI');
   });
 
   it('should only activate the exact navigation link for nested task routes', async () => {

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { STARTER_TASKS, Task } from '../models/task.model';
+import { AuditLogEvent, STARTER_TASKS, Task, TaskPriority, TaskStatus } from '../models/task.model';
 import { TaskService } from './task.service';
 
 const STORAGE_KEY = 'task-manager.tasks';
@@ -28,6 +28,14 @@ function setupStorage(initialValue: string | null = null) {
   return storage;
 }
 
+function setupCrypto(...ids: string[]) {
+  const randomUUID = vi.fn();
+  ids.forEach((id) => randomUUID.mockReturnValueOnce(id));
+  randomUUID.mockReturnValue('fallback-uuid');
+  vi.stubGlobal('crypto', { randomUUID });
+  return randomUUID;
+}
+
 function setupService(): TaskService {
   TestBed.configureTestingModule({ providers: [TaskService] });
   return TestBed.inject(TaskService);
@@ -46,7 +54,7 @@ describe('TaskService', () => {
     TestBed.resetTestingModule();
   });
 
-  it('loads starter tasks when storage is unavailable and creates fallback ids', () => {
+  it('loads starter tasks when storage is unavailable and creates draft tasks with fallback ids', () => {
     vi.stubGlobal('localStorage', undefined);
     vi.stubGlobal('crypto', undefined);
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
@@ -56,105 +64,344 @@ describe('TaskService', () => {
     const task = service.addTask({
       title: '  Nova tarefa  ',
       description: '  Detalhe  ',
-      status: 'pending',
+      priority: TaskPriority.High,
+      category: '  Produto  ',
+      tags: [' discovery ', 'ux'],
+      assignee: '  Lucas  ',
+      dueDate: '2026-06-01',
+      acceptanceCriteria: ['criterio um'],
     });
 
     expect(service.totalTasks()).toBe(STARTER_TASKS.length + 1);
-    expect(service.countByStatus('pending')).toBe(2);
+    expect(service.countByStatus(TaskStatus.Draft)).toBe(2);
     expect(task).toEqual({
       id: `${new Date(TEST_NOW).getTime()}-i`,
       title: 'Nova tarefa',
       description: 'Detalhe',
-      status: 'pending',
+      priority: TaskPriority.High,
+      status: TaskStatus.Draft,
+      category: 'Produto',
+      tags: [' discovery ', 'ux'],
+      assignee: 'Lucas',
+      dueDate: '2026-06-01',
+      acceptanceCriteria: ['criterio um'],
       createdAt: TEST_NOW,
       updatedAt: TEST_NOW,
+      aiSuggestions: [],
+      auditLogs: [
+        {
+          id: `${new Date(TEST_NOW).getTime()}-i`,
+          event: AuditLogEvent.TaskCreated,
+          taskId: `${new Date(TEST_NOW).getTime()}-i`,
+          timestamp: TEST_NOW,
+          metadata: { status: TaskStatus.Draft },
+        },
+      ],
     });
   });
 
-  it('loads starter tasks from empty storage, uses crypto ids, and persists updates', () => {
+  it('uses crypto ids and persists enriched tasks to localStorage', () => {
     const storage = setupStorage(null);
-    vi.stubGlobal('crypto', { randomUUID: vi.fn(() => 'task-id') });
+    setupCrypto('task-id', 'log-id');
 
     const service = setupService();
     const task = service.addTask({
       title: 'Criar roteiro',
       description: 'Preparar pauta da sprint',
-      status: 'in_progress',
+      priority: TaskPriority.Medium,
+      category: 'Delivery',
+      tags: [],
+      assignee: '  ',
+      dueDate: '',
+      acceptanceCriteria: [],
     });
     TestBed.tick();
 
     expect(task.id).toBe('task-id');
-    expect(service.tasks()[0]).toEqual({
-      id: 'task-id',
-      title: 'Criar roteiro',
-      description: 'Preparar pauta da sprint',
-      status: 'in_progress',
-      createdAt: TEST_NOW,
-      updatedAt: TEST_NOW,
+    expect(task.status).toBe(TaskStatus.Draft);
+    expect(task.assignee).toBeUndefined();
+    expect(task.dueDate).toBeUndefined();
+    expect(task.auditLogs[0]).toEqual({
+      id: 'log-id',
+      event: AuditLogEvent.TaskCreated,
+      taskId: 'task-id',
+      timestamp: TEST_NOW,
+      metadata: { status: TaskStatus.Draft },
     });
     expect(storage.setItem).toHaveBeenLastCalledWith(STORAGE_KEY, JSON.stringify(service.tasks()));
   });
 
-  it('loads stored arrays, changes status, deletes tasks, and keeps other tasks intact', () => {
-    const storedTasks: Task[] = [
+  it('migrates legacy tasks and preserves enriched fields when available', () => {
+    const storedTasks = [
       {
-        id: 'one',
-        title: 'Primeira',
-        description: 'Detalhe um',
+        id: 'legacy-pending',
+        title: '',
+        description: 'Detalhe legado',
         status: 'pending',
         createdAt: '2026-05-29T08:00:00.000Z',
         updatedAt: '2026-05-29T08:00:00.000Z',
+        tags: [' bug ', 12, 'auth'],
       },
       {
-        id: 'two',
-        title: 'Segunda',
-        description: 'Detalhe dois',
+        id: 'legacy-done',
+        title: 'Finalizada',
+        description: 'Detalhe finalizado',
         status: 'done',
-        createdAt: '2026-05-29T09:00:00.000Z',
-        updatedAt: '2026-05-29T09:00:00.000Z',
+        priority: 'urgent',
+        category: 'Operacao',
+        assignee: ' Maria ',
+        dueDate: '2026-07-01',
+        acceptanceCriteria: [' Aceite ', null],
+        approvedAt: '2026-05-29T10:00:00.000Z',
+        publishedAt: '2026-05-29T11:00:00.000Z',
+        aiSuggestions: [{ id: 'suggestion' }],
+        qualityScore: { score: 88, summary: 'Boa', warnings: [], evaluatedAt: TEST_NOW },
+        auditLogs: [{ id: 'audit' }],
+      },
+      null,
+      {
+        id: 'legacy-invalid-status',
+        title: 123,
+        description: 456,
+        status: 42,
+        priority: 42,
+        category: 7,
+        tags: 'sem-array',
+        assignee: 99,
+        dueDate: 99,
+        acceptanceCriteria: 'sem-array',
+      },
+      {
+        id: 'legacy-unknown-status',
+        title: 'Status desconhecido',
+        description: 'Deve voltar para draft',
+        status: 'unknown',
       },
     ];
     setupStorage(JSON.stringify(storedTasks));
 
     const service = setupService();
 
-    expect(service.tasks()).toEqual(storedTasks);
-
-    service.changeStatus('one', 'in_progress');
     expect(service.tasks()).toEqual([
       {
-        ...storedTasks[0],
-        status: 'in_progress',
-        updatedAt: TEST_NOW,
+        id: 'legacy-pending',
+        title: 'Sem titulo',
+        description: 'Detalhe legado',
+        priority: TaskPriority.Medium,
+        status: TaskStatus.Draft,
+        category: 'Geral',
+        tags: ['bug', 'auth'],
+        assignee: undefined,
+        dueDate: undefined,
+        acceptanceCriteria: [],
+        createdAt: '2026-05-29T08:00:00.000Z',
+        updatedAt: '2026-05-29T08:00:00.000Z',
+        approvedAt: undefined,
+        publishedAt: undefined,
+        aiSuggestions: [],
+        qualityScore: undefined,
+        auditLogs: [],
       },
-      storedTasks[1],
+      {
+        id: 'legacy-done',
+        title: 'Finalizada',
+        description: 'Detalhe finalizado',
+        priority: TaskPriority.Urgent,
+        status: TaskStatus.Completed,
+        category: 'Operacao',
+        tags: [],
+        assignee: 'Maria',
+        dueDate: '2026-07-01',
+        acceptanceCriteria: ['Aceite'],
+        createdAt: TEST_NOW,
+        updatedAt: TEST_NOW,
+        approvedAt: '2026-05-29T10:00:00.000Z',
+        publishedAt: '2026-05-29T11:00:00.000Z',
+        aiSuggestions: [{ id: 'suggestion' }],
+        qualityScore: { score: 88, summary: 'Boa', warnings: [], evaluatedAt: TEST_NOW },
+        auditLogs: [{ id: 'audit' }],
+      },
+      {
+        id: 'legacy-invalid-status',
+        title: 'Sem titulo',
+        description: '',
+        priority: TaskPriority.Medium,
+        status: TaskStatus.Draft,
+        category: 'Geral',
+        tags: [],
+        assignee: undefined,
+        dueDate: undefined,
+        acceptanceCriteria: [],
+        createdAt: TEST_NOW,
+        updatedAt: TEST_NOW,
+        approvedAt: undefined,
+        publishedAt: undefined,
+        aiSuggestions: [],
+        qualityScore: undefined,
+        auditLogs: [],
+      },
+      {
+        id: 'legacy-unknown-status',
+        title: 'Status desconhecido',
+        description: 'Deve voltar para draft',
+        priority: TaskPriority.Medium,
+        status: TaskStatus.Draft,
+        category: 'Geral',
+        tags: [],
+        assignee: undefined,
+        dueDate: undefined,
+        acceptanceCriteria: [],
+        createdAt: TEST_NOW,
+        updatedAt: TEST_NOW,
+        approvedAt: undefined,
+        publishedAt: undefined,
+        aiSuggestions: [],
+        qualityScore: undefined,
+        auditLogs: [],
+      },
     ]);
-    expect(service.countByStatus('in_progress')).toBe(1);
+  });
+
+  it('updates tasks and records changed fields in audit logs', () => {
+    setupStorage(
+      JSON.stringify([
+        {
+          id: 'one',
+          title: 'Primeira',
+          description: 'Detalhe um',
+          status: TaskStatus.Draft,
+        },
+        {
+          id: 'two',
+          title: 'Segunda',
+          description: 'Detalhe dois',
+          status: TaskStatus.InProgress,
+        },
+      ]),
+    );
+    setupCrypto('update-log-id');
+
+    const service = setupService();
+    service.updateTask('one', {
+      title: ' Atualizada ',
+      description: ' Nova descricao ',
+      priority: TaskPriority.Low,
+      category: ' Produto ',
+      tags: ['tag'],
+      assignee: ' Ana ',
+      dueDate: '2026-08-01',
+      acceptanceCriteria: ['aceite'],
+    });
+
+    expect(service.tasks()[0]).toEqual({
+      ...service.tasks()[0],
+      id: 'one',
+      title: 'Atualizada',
+      description: 'Nova descricao',
+      priority: TaskPriority.Low,
+      status: TaskStatus.Draft,
+      category: 'Produto',
+      tags: ['tag'],
+      assignee: 'Ana',
+      dueDate: '2026-08-01',
+      acceptanceCriteria: ['aceite'],
+      updatedAt: TEST_NOW,
+      auditLogs: [
+        {
+          id: 'update-log-id',
+          event: AuditLogEvent.TaskUpdated,
+          taskId: 'one',
+          timestamp: TEST_NOW,
+          metadata: {
+            changedFields: [
+              'title',
+              'description',
+              'priority',
+              'category',
+              'tags',
+              'assignee',
+              'dueDate',
+              'acceptanceCriteria',
+            ],
+          },
+        },
+      ],
+    });
+    expect(service.tasks()[1].title).toBe('Segunda');
+
+    setupCrypto('empty-update-log-id');
+    service.updateTask('one', {});
+    expect(service.tasks()[0].auditLogs.at(-1)).toEqual({
+      id: 'empty-update-log-id',
+      event: AuditLogEvent.TaskUpdated,
+      taskId: 'one',
+      timestamp: TEST_NOW,
+      metadata: {
+        changedFields: [],
+      },
+    });
+  });
+
+  it('changes status, fills approval/publication timestamps, and deletes tasks', () => {
+    setupStorage(
+      JSON.stringify([
+        {
+          id: 'one',
+          title: 'Primeira',
+          description: 'Detalhe um',
+          status: TaskStatus.Draft,
+        },
+        {
+          id: 'two',
+          title: 'Segunda',
+          description: 'Detalhe dois',
+          status: TaskStatus.InProgress,
+        },
+      ]),
+    );
+    setupCrypto('approved-log', 'published-log', 'progress-log');
+
+    const service = setupService();
+
+    service.changeStatus('one', TaskStatus.Approved);
+    expect(service.tasks()[0].approvedAt).toBe(TEST_NOW);
+    expect(service.tasks()[0].publishedAt).toBeUndefined();
+
+    service.changeStatus('one', TaskStatus.Published);
+    expect(service.tasks()[0].approvedAt).toBe(TEST_NOW);
+    expect(service.tasks()[0].publishedAt).toBe(TEST_NOW);
+
+    service.changeStatus('two', TaskStatus.InProgress);
+    expect(service.tasks()[1].auditLogs.at(-1)).toEqual({
+      id: 'progress-log',
+      event: AuditLogEvent.StatusChanged,
+      taskId: 'two',
+      timestamp: TEST_NOW,
+      metadata: {
+        fromStatus: TaskStatus.InProgress,
+        toStatus: TaskStatus.InProgress,
+      },
+    });
 
     service.deleteTask('two');
-    expect(service.tasks()).toEqual([
-      {
-        ...storedTasks[0],
-        status: 'in_progress',
-        updatedAt: TEST_NOW,
-      },
-    ]);
+    expect(service.tasks().map((task) => task.id)).toEqual(['one']);
   });
 
-  it('falls back to starter tasks for non-array stored values', () => {
+  it('falls back to starter tasks for invalid stored data', () => {
     setupStorage(JSON.stringify({ id: 'not-an-array' }));
+    expect(setupService().tasks()).toEqual(STARTER_TASKS);
 
-    const service = setupService();
-
-    expect(service.tasks()).toEqual(STARTER_TASKS);
-  });
-
-  it('falls back to starter tasks for invalid JSON', () => {
+    TestBed.resetTestingModule();
     setupStorage('{invalid json');
+    expect(setupService().tasks()).toEqual(STARTER_TASKS);
 
-    const service = setupService();
+    TestBed.resetTestingModule();
+    setupStorage(JSON.stringify([{ title: 'sem id' }]));
+    expect(setupService().tasks()).toEqual(STARTER_TASKS);
 
-    expect(service.tasks()).toEqual(STARTER_TASKS);
+    TestBed.resetTestingModule();
+    setupStorage(JSON.stringify([]));
+    expect(setupService().tasks()).toEqual(STARTER_TASKS);
   });
 
   it('creates fallback ids when crypto exists without randomUUID', () => {
@@ -165,8 +412,11 @@ describe('TaskService', () => {
     const service = setupService();
     const task = service.addTask({
       title: 'Sem randomUUID',
-      description: '',
-      status: 'done',
+      description: 'Detalhe',
+      priority: TaskPriority.Low,
+      category: 'Testes',
+      tags: [],
+      acceptanceCriteria: [],
     });
 
     expect(task.id).toBe(`${new Date(TEST_NOW).getTime()}-r`);
