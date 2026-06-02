@@ -118,6 +118,9 @@ describe('TaskListComponent', () => {
     expect(element.textContent).toContain('Produto');
     expect(element.textContent).toContain('Prioridades revisadas');
     expect(element.textContent).toContain('1 logs de auditoria');
+    expect(element.querySelector('article.task-card a')?.getAttribute('href')).toBe(
+      '/tasks/draft/review',
+    );
   });
 
   it('filters tasks by status and search text across enriched fields', () => {

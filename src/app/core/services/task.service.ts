@@ -1,6 +1,7 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import {
   AuditLogEvent,
+  CmsPayload,
   NewTaskInput,
   STARTER_TASKS,
   Task,
@@ -126,6 +127,41 @@ export class TaskService {
     this.tasks.update((tasks) => tasks.filter((task) => task.id !== taskId));
   }
 
+  findTask(taskId: string): Task | undefined {
+    return this.tasks().find((task) => task.id === taskId);
+  }
+
+  applyWorkflowUpdate(
+    taskId: string,
+    update: Partial<Task>,
+    auditEvents: { event: AuditLogEvent; metadata?: Record<string, unknown> }[],
+    timestamp = new Date().toISOString(),
+  ): Task | undefined {
+    let workflowTask: Task | undefined;
+
+    this.tasks.update((tasks) =>
+      tasks.map((task) => {
+        if (task.id !== taskId) {
+          return task;
+        }
+
+        workflowTask = auditEvents.reduce(
+          (updatedTask, auditEvent) =>
+            this.withAuditLog(updatedTask, auditEvent.event, auditEvent.metadata, timestamp),
+          {
+            ...task,
+            ...update,
+            updatedAt: timestamp,
+          },
+        );
+
+        return workflowTask;
+      }),
+    );
+
+    return workflowTask;
+  }
+
   countByStatus(status: TaskStatus): number {
     return this.tasks().filter((task) => task.status === status).length;
   }
@@ -148,7 +184,7 @@ export class TaskService {
   private withAuditLog(
     task: Task,
     event: AuditLogEvent,
-    metadata: Record<string, unknown>,
+    metadata: Record<string, unknown> | undefined,
     timestamp: string,
   ): Task {
     return {
@@ -214,8 +250,14 @@ export class TaskService {
       qualityScore: this.isRecord(rawTask['qualityScore'])
         ? (rawTask['qualityScore'] as unknown as Task['qualityScore'])
         : undefined,
+      cmsPayload: this.readCmsPayload(rawTask['cmsPayload']),
+      cmsError: this.optionalText(this.readOptionalText(rawTask, 'cmsError')),
       auditLogs: Array.isArray(rawTask['auditLogs']) ? rawTask['auditLogs'] : [],
     };
+  }
+
+  private readCmsPayload(value: unknown): CmsPayload | undefined {
+    return this.isRecord(value) ? (value as unknown as CmsPayload) : undefined;
   }
 
   private readStatus(value: unknown): TaskStatus {

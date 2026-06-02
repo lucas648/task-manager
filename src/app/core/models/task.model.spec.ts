@@ -1,4 +1,5 @@
 import {
+  AuditLogEvent,
   FILTER_OPTIONS,
   PRIORITY_LABELS,
   PRIORITY_OPTIONS,
@@ -8,6 +9,7 @@ import {
   TASK_COLUMNS,
   TaskPriority,
   TaskStatus,
+  WORKFLOW_TRANSITIONS,
   WORKFLOW_STATUS_OPTIONS,
 } from './task.model';
 
@@ -31,6 +33,29 @@ describe('task model constants', () => {
     expect(Object.values(TaskPriority)).toEqual(['low', 'medium', 'high', 'urgent']);
     expect(PRIORITY_LABELS[TaskPriority.Urgent]).toBe('Urgente');
     expect(PRIORITY_OPTIONS.map((option) => option.value)).toEqual(Object.values(TaskPriority));
+  });
+
+  it('defines workflow audit events and transitions', () => {
+    expect(Object.values(AuditLogEvent)).toEqual([
+      'TASK_CREATED',
+      'TASK_UPDATED',
+      'STATUS_CHANGED',
+      'AI_REVIEW_STARTED',
+      'AI_REVIEW_SUCCESS',
+      'AI_REVIEW_ERROR',
+      'TASK_APPROVED',
+      'PAYLOAD_GENERATED',
+      'CMS_SEND_STARTED',
+      'CMS_SEND_SUCCESS',
+      'CMS_SEND_ERROR',
+    ]);
+    expect(WORKFLOW_TRANSITIONS).toEqual({
+      [TaskStatus.Draft]: TaskStatus.AiReviewed,
+      [TaskStatus.AiReviewed]: TaskStatus.Approved,
+      [TaskStatus.Approved]: TaskStatus.Published,
+      [TaskStatus.Published]: TaskStatus.InProgress,
+      [TaskStatus.InProgress]: TaskStatus.Completed,
+    });
   });
 
   it('builds filters from all tasks plus every status', () => {

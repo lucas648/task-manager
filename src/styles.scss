@@ -515,6 +515,10 @@ textarea:focus {
   align-self: end;
 }
 
+.task-card-action {
+  width: 100%;
+}
+
 .empty-state {
   display: grid;
   place-items: center;
@@ -589,10 +593,147 @@ textarea:focus {
   background: #ffffff;
 }
 
+.workflow-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 16px;
+  align-items: start;
+  padding: 22px 0;
+}
+
+.workflow-panel {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #dce3ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.workflow-panel h2 {
+  margin: 0 0 14px;
+  color: #101828;
+  font-size: 1.2rem;
+  line-height: 1.25;
+}
+
+.task-review-details {
+  display: grid;
+  gap: 14px;
+}
+
+.task-review-details h2 {
+  margin-bottom: 0;
+  font-size: 1.45rem;
+}
+
+.task-review-details p {
+  margin: 0;
+  color: #44546a;
+  line-height: 1.5;
+}
+
+.workflow-steps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workflow-steps li {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid #dce3ee;
+  border-left: 5px solid #c8d2df;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.workflow-steps li.is-current {
+  border-left-color: #1d7a8c;
+  background: #eef9fb;
+}
+
+.workflow-steps li.is-complete {
+  border-left-color: #067647;
+}
+
+.workflow-steps span {
+  color: #17202a;
+  font-weight: 900;
+}
+
+.workflow-steps small {
+  color: #65758b;
+  font-weight: 700;
+}
+
+.workflow-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.workflow-message {
+  margin: 12px 0 0;
+  color: #1f4f5b;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.payload-panel,
+.audit-panel {
+  margin-top: 16px;
+}
+
+.payload-panel pre {
+  overflow: auto;
+  max-height: 360px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #d2dbe7;
+  border-radius: 8px;
+  background: #101828;
+  color: #f8fafc;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.audit-panel ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.audit-panel li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf1f6;
+  color: #44546a;
+  font-weight: 700;
+}
+
+.audit-panel strong {
+  color: #17202a;
+}
+
+.empty-detail {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin-top: 22px;
+}
+
 @media (max-width: 1100px) {
   .home-hero,
   .screen-header,
   .board,
+  .workflow-layout,
   .task-form {
     grid-template-columns: 1fr;
   }

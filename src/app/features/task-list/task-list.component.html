@@ -110,6 +110,13 @@
                   }
                 </select>
               </label>
+
+              <a
+                class="secondary-action task-card-action"
+                [routerLink]="['/tasks', task.id, 'review']"
+              >
+                Abrir fluxo
+              </a>
             </article>
           } @empty {
             <p class="empty-state">Sem tasks</p>

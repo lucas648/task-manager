@@ -1,0 +1,124 @@
+<main class="task-shell">
+  <header class="screen-header">
+    <div>
+      <p class="eyebrow">Workflow</p>
+      <h1>Revisao da task</h1>
+    </div>
+
+    <a class="secondary-action action-link" routerLink="/tasks">Voltar para lista</a>
+  </header>
+
+  @if (task(); as task) {
+    <section class="workflow-layout" aria-label="Fluxo da task">
+      <article class="workflow-panel task-review-details">
+        <p class="eyebrow">{{ task.status }}</p>
+        <h2>{{ task.title }}</h2>
+        <p>{{ task.description }}</p>
+
+        <div class="task-tags" aria-label="Metadados da task">
+          <span>{{ task.priority }}</span>
+          <span>{{ task.category }}</span>
+          @if (task.assignee) {
+            <span>{{ task.assignee }}</span>
+          }
+          @if (task.dueDate) {
+            <span>{{ task.dueDate | date: 'dd/MM/yyyy' }}</span>
+          }
+        </div>
+
+        @if (task.tags.length) {
+          <div class="task-tags" aria-label="Tags">
+            @for (tag of task.tags; track tag) {
+              <span>{{ tag }}</span>
+            }
+          </div>
+        }
+
+        @if (task.acceptanceCriteria.length) {
+          <ol class="criteria-list">
+            @for (criterion of task.acceptanceCriteria; track criterion) {
+              <li>{{ criterion }}</li>
+            }
+          </ol>
+        }
+      </article>
+
+      <aside class="workflow-panel">
+        <h2>Fluxo principal</h2>
+
+        <ol class="workflow-steps">
+          @for (step of workflowSteps; track step.status) {
+            <li
+              [class.is-current]="task.status === step.status"
+              [class.is-complete]="isCompletedStep(task.status, step.status)"
+            >
+              <span>{{ step.label }}</span>
+              <small>{{ step.caption }}</small>
+            </li>
+          }
+        </ol>
+
+        <div class="workflow-actions" aria-label="Acoes do workflow">
+          @if (task.status === TaskStatus.Draft) {
+            <button type="button" class="primary-action" (click)="reviewWithAi()">
+              Revisar com IA
+            </button>
+          } @else if (task.status === TaskStatus.AiReviewed) {
+            <button type="button" class="primary-action" (click)="approveTask()">
+              Aprovar tarefa
+            </button>
+          } @else if (task.status === TaskStatus.Approved) {
+            <button type="button" class="primary-action" (click)="publishTask()">
+              Gerar payload e publicar
+            </button>
+          } @else if (task.status === TaskStatus.Published) {
+            <button type="button" class="primary-action" (click)="startWork()">
+              Iniciar trabalho
+            </button>
+          } @else if (task.status === TaskStatus.InProgress) {
+            <button type="button" class="primary-action" (click)="completeTask()">
+              Concluir task
+            </button>
+          } @else if (task.status === TaskStatus.Completed) {
+            <p class="workflow-message">Task concluida.</p>
+          } @else {
+            <button type="button" class="secondary-action" (click)="publishTask()">
+              Tentar publicar novamente
+            </button>
+          }
+        </div>
+
+        @if (message()) {
+          <p class="workflow-message">{{ message() }}</p>
+        }
+      </aside>
+    </section>
+
+    @if (payloadJson()) {
+      <section class="workflow-panel payload-panel" aria-label="Payload JSON">
+        <h2>Payload JSON</h2>
+        <pre>{{ payloadJson() }}</pre>
+      </section>
+    }
+
+    <section class="workflow-panel audit-panel" aria-label="Auditoria da task">
+      <h2>Auditoria</h2>
+
+      <ol>
+        @for (log of task.auditLogs; track log.id) {
+          <li>
+            <strong>{{ log.event }}</strong>
+            <span>{{ log.timestamp | date: 'dd/MM/yyyy HH:mm' }}</span>
+          </li>
+        } @empty {
+          <li>Sem logs registrados.</li>
+        }
+      </ol>
+    </section>
+  } @else {
+    <section class="workflow-panel empty-detail">
+      <h2>Task nao encontrada</h2>
+      <a class="primary-action action-link" routerLink="/tasks">Ver lista completa</a>
+    </section>
+  }
+</main>
