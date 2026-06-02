@@ -20,6 +20,14 @@ export enum AuditLogEvent {
   TaskCreated = 'TASK_CREATED',
   TaskUpdated = 'TASK_UPDATED',
   StatusChanged = 'STATUS_CHANGED',
+  AiReviewStarted = 'AI_REVIEW_STARTED',
+  AiReviewSuccess = 'AI_REVIEW_SUCCESS',
+  AiReviewError = 'AI_REVIEW_ERROR',
+  TaskApproved = 'TASK_APPROVED',
+  PayloadGenerated = 'PAYLOAD_GENERATED',
+  CmsSendStarted = 'CMS_SEND_STARTED',
+  CmsSendSuccess = 'CMS_SEND_SUCCESS',
+  CmsSendError = 'CMS_SEND_ERROR',
 }
 
 export type TaskFilter = 'all' | TaskStatus;
@@ -60,6 +68,18 @@ export interface CmsPayload {
   source: 'taskflow-ai';
 }
 
+export interface AiReviewResult {
+  reviewedAt: string;
+  summary: string;
+}
+
+export interface CmsSendResult {
+  success: boolean;
+  statusCode: number;
+  message: string;
+  sentAt: string;
+}
+
 export interface ChaosScenario {
   id: string;
   name: string;
@@ -84,6 +104,8 @@ export interface Task {
   publishedAt?: string;
   aiSuggestions: AiSuggestion[];
   qualityScore?: TaskQualityScore;
+  cmsPayload?: CmsPayload;
+  cmsError?: string;
   auditLogs: AuditLog[];
 }
 
@@ -117,6 +139,13 @@ export interface TaskColumn {
   status: TaskStatus;
   label: string;
   caption: string;
+}
+
+export interface WorkflowActionResult {
+  success: boolean;
+  message: string;
+  task?: Task;
+  payload?: CmsPayload;
 }
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -169,6 +198,14 @@ export const TASK_COLUMNS: TaskColumn[] = [
   { status: TaskStatus.InProgress, label: 'In Progress', caption: 'Trabalho ativo' },
   { status: TaskStatus.Completed, label: 'Completed', caption: 'Entrega finalizada' },
 ];
+
+export const WORKFLOW_TRANSITIONS: Partial<Record<TaskStatus, TaskStatus>> = {
+  [TaskStatus.Draft]: TaskStatus.AiReviewed,
+  [TaskStatus.AiReviewed]: TaskStatus.Approved,
+  [TaskStatus.Approved]: TaskStatus.Published,
+  [TaskStatus.Published]: TaskStatus.InProgress,
+  [TaskStatus.InProgress]: TaskStatus.Completed,
+};
 
 export const STARTER_TASKS: Task[] = [
   {

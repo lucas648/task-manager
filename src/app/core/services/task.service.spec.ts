@@ -156,6 +156,17 @@ describe('TaskService', () => {
         publishedAt: '2026-05-29T11:00:00.000Z',
         aiSuggestions: [{ id: 'suggestion' }],
         qualityScore: { score: 88, summary: 'Boa', warnings: [], evaluatedAt: TEST_NOW },
+        cmsPayload: {
+          externalId: 'legacy-done',
+          title: 'Finalizada',
+          description: 'Detalhe finalizado',
+          priority: 'urgent',
+          tags: [],
+          acceptanceCriteria: ['Aceite'],
+          approvedAt: '2026-05-29T10:00:00.000Z',
+          source: 'taskflow-ai',
+        },
+        cmsError: ' Erro anterior ',
         auditLogs: [{ id: 'audit' }],
       },
       null,
@@ -200,6 +211,8 @@ describe('TaskService', () => {
         publishedAt: undefined,
         aiSuggestions: [],
         qualityScore: undefined,
+        cmsPayload: undefined,
+        cmsError: undefined,
         auditLogs: [],
       },
       {
@@ -219,6 +232,17 @@ describe('TaskService', () => {
         publishedAt: '2026-05-29T11:00:00.000Z',
         aiSuggestions: [{ id: 'suggestion' }],
         qualityScore: { score: 88, summary: 'Boa', warnings: [], evaluatedAt: TEST_NOW },
+        cmsPayload: {
+          externalId: 'legacy-done',
+          title: 'Finalizada',
+          description: 'Detalhe finalizado',
+          priority: 'urgent',
+          tags: [],
+          acceptanceCriteria: ['Aceite'],
+          approvedAt: '2026-05-29T10:00:00.000Z',
+          source: 'taskflow-ai',
+        },
+        cmsError: 'Erro anterior',
         auditLogs: [{ id: 'audit' }],
       },
       {
@@ -238,6 +262,8 @@ describe('TaskService', () => {
         publishedAt: undefined,
         aiSuggestions: [],
         qualityScore: undefined,
+        cmsPayload: undefined,
+        cmsError: undefined,
         auditLogs: [],
       },
       {
@@ -257,6 +283,8 @@ describe('TaskService', () => {
         publishedAt: undefined,
         aiSuggestions: [],
         qualityScore: undefined,
+        cmsPayload: undefined,
+        cmsError: undefined,
         auditLogs: [],
       },
     ]);
@@ -340,6 +368,59 @@ describe('TaskService', () => {
         changedFields: [],
       },
     });
+  });
+
+  it('finds tasks and applies workflow updates with audit logs', () => {
+    setupStorage(
+      JSON.stringify([
+        {
+          id: 'one',
+          title: 'Primeira',
+          description: 'Detalhe um',
+          status: TaskStatus.Approved,
+          approvedAt: TEST_NOW,
+        },
+      ]),
+    );
+    setupCrypto('payload-log-id');
+
+    const service = setupService();
+    const payload = {
+      externalId: 'one',
+      title: 'Primeira',
+      description: 'Detalhe um',
+      priority: TaskPriority.Medium,
+      tags: [],
+      acceptanceCriteria: [],
+      approvedAt: TEST_NOW,
+      source: 'taskflow-ai' as const,
+    };
+
+    expect(service.findTask('one')?.title).toBe('Primeira');
+    expect(
+      service.applyWorkflowUpdate(
+        'one',
+        {
+          cmsPayload: payload,
+          status: TaskStatus.Published,
+        },
+        [{ event: AuditLogEvent.PayloadGenerated }],
+      ),
+    ).toEqual({
+      ...service.tasks()[0],
+      cmsPayload: payload,
+      status: TaskStatus.Published,
+      updatedAt: TEST_NOW,
+      auditLogs: [
+        {
+          id: 'payload-log-id',
+          event: AuditLogEvent.PayloadGenerated,
+          taskId: 'one',
+          timestamp: TEST_NOW,
+        },
+      ],
+    });
+    expect(service.applyWorkflowUpdate('missing', {}, [])).toBeUndefined();
   });
 
   it('changes status, fills approval/publication timestamps, and deletes tasks', () => {
