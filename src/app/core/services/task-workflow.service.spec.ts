@@ -66,6 +66,54 @@ function storedTask(status = TaskStatus.Draft): Partial<Task> {
   };
 }
 
+function storedReviewedTask(): Partial<Task> {
+  return {
+    ...storedTask(TaskStatus.AiReviewed),
+    aiSuggestions: [
+      {
+        id: 'title-suggestion',
+        field: 'title',
+        originalValue: 'Preparar publicacao',
+        suggestedValue: 'Preparar publicacao com escopo claro',
+        reason: 'Titulo mais claro.',
+        decision: 'pending',
+      },
+      {
+        id: 'description-suggestion',
+        field: 'description',
+        originalValue: 'Gerar fluxo completo',
+        suggestedValue: ['Linha um', 'Linha dois'],
+        reason: 'Descricao em linhas.',
+        decision: 'pending',
+      },
+      {
+        id: 'criteria-suggestion',
+        field: 'acceptanceCriteria',
+        originalValue: ['Payload gerado'],
+        suggestedValue: ['Criterio revisado'],
+        reason: 'Criterio mais objetivo.',
+        decision: 'pending',
+      },
+      {
+        id: 'criteria-string-suggestion',
+        field: 'acceptanceCriteria',
+        originalValue: ['Payload gerado'],
+        suggestedValue: 'Criterio unico',
+        reason: 'Criterio unico mais objetivo.',
+        decision: 'pending',
+      },
+      {
+        id: 'decided-suggestion',
+        field: 'title',
+        originalValue: 'Preparar publicacao',
+        suggestedValue: 'Ja decidida',
+        reason: 'Ja aplicada.',
+        decision: 'applied',
+      },
+    ],
+  };
+}
+
 describe('TaskWorkflowService', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -100,6 +148,17 @@ describe('TaskWorkflowService', () => {
       message: 'Revisao da IA concluida. A task esta pronta para aprovacao humana.',
     });
     expect(taskService.findTask('task-id')?.status).toBe(TaskStatus.AiReviewed);
+    expect(taskService.findTask('task-id')).toMatchObject({
+      aiSuggestions: [
+        { id: 'task-id-title-ai-suggestion', decision: 'pending' },
+        { id: 'task-id-description-ai-suggestion', decision: 'pending' },
+        { id: 'task-id-criteria-ai-suggestion', decision: 'pending' },
+      ],
+      qualityScore: {
+        score: 88,
+        warnings: ['Descricao pode detalhar mais contexto e impacto.'],
+      },
+    });
     expect(taskService.findTask('task-id')?.auditLogs.map((log) => log.event)).toEqual([
       AuditLogEvent.AiReviewStarted,
       AuditLogEvent.StatusChanged,
@@ -146,6 +205,114 @@ describe('TaskWorkflowService', () => {
         toStatus: TaskStatus.Completed,
       },
     });
+  });
+
+  it('applies and rejects pending AI suggestions', () => {
+    setupCrypto(
+      'title-apply-log',
+      'description-apply-log',
+      'criteria-apply-log',
+      'criteria-string-apply-log',
+      'reject-log',
+    );
+    const { taskService, workflowService } = setupWorkflow([storedReviewedTask()]);
+
+    expect(workflowService.applySuggestion('task-id', 'title-suggestion')).toMatchObject({
+      success: true,
+      message: 'Sugestao aplicada.',
+    });
+    expect(taskService.findTask('task-id')?.title).toBe('Preparar publicacao com escopo claro');
+    expect(
+      taskService
+        .findTask('task-id')
+        ?.aiSuggestions.find((suggestion) => suggestion.id === 'title-suggestion'),
+    ).toMatchObject({ id: 'title-suggestion', decision: 'applied' });
+
+    expect(workflowService.applySuggestion('task-id', 'description-suggestion')).toMatchObject({
+      success: true,
+      message: 'Sugestao aplicada.',
+    });
+    expect(taskService.findTask('task-id')?.description).toBe('Linha um\nLinha dois');
+
+    expect(workflowService.applySuggestion('task-id', 'criteria-suggestion')).toMatchObject({
+      success: true,
+      message: 'Sugestao aplicada.',
+    });
+    expect(taskService.findTask('task-id')?.acceptanceCriteria).toEqual(['Criterio revisado']);
+
+    expect(workflowService.applySuggestion('task-id', 'criteria-string-suggestion')).toMatchObject({
+      success: true,
+      message: 'Sugestao aplicada.',
+    });
+    expect(taskService.findTask('task-id')?.acceptanceCriteria).toEqual(['Criterio unico']);
+
+    expect(workflowService.rejectSuggestion('task-id', 'description-suggestion')).toMatchObject({
+      success: false,
+      message: 'Sugestao ja decidida.',
+    });
+    expect(workflowService.rejectSuggestion('task-id', 'decided-suggestion')).toMatchObject({
+      success: false,
+      message: 'Sugestao ja decidida.',
+    });
+
+    setupCrypto('fresh-reject-log');
+    const serviceState = taskService.findTask('task-id') as Task;
+    taskService.applyWorkflowUpdate(
+      'task-id',
+      {
+        aiSuggestions: [
+          ...serviceState.aiSuggestions,
+          {
+            id: 'rejectable-suggestion',
+            field: 'title',
+            originalValue: 'Preparar publicacao',
+            suggestedValue: 'Rejeitar esta',
+            reason: 'Opcional.',
+            decision: 'pending',
+          },
+        ],
+      },
+      [],
+    );
+
+    expect(workflowService.rejectSuggestion('task-id', 'rejectable-suggestion')).toMatchObject({
+      success: true,
+      message: 'Sugestao rejeitada.',
+    });
+    expect(taskService.findTask('task-id')?.auditLogs.at(-1)).toEqual({
+      id: 'fresh-reject-log',
+      event: AuditLogEvent.AiSuggestionRejected,
+      taskId: 'task-id',
+      timestamp: TEST_NOW,
+      metadata: {
+        field: 'title',
+        suggestionId: 'rejectable-suggestion',
+      },
+    });
+  });
+
+  it('guards suggestion decisions by task, status, and suggestion id', () => {
+    const { workflowService } = setupWorkflow([storedReviewedTask()]);
+
+    expect(workflowService.applySuggestion('missing', 'title-suggestion')).toEqual({
+      success: false,
+      message: 'Task nao encontrada.',
+    });
+    expect(workflowService.applySuggestion('task-id', 'missing-suggestion')).toMatchObject({
+      success: false,
+      message: 'Sugestao nao encontrada.',
+    });
+
+    TestBed.resetTestingModule();
+    const wrongStatus = { ...storedReviewedTask(), status: TaskStatus.Draft };
+    const nextSetup = setupWorkflow([wrongStatus]);
+
+    expect(nextSetup.workflowService.rejectSuggestion('task-id', 'title-suggestion')).toMatchObject(
+      {
+        success: false,
+        message: 'A task precisa estar em ai_reviewed para rejeitar sugestoes.',
+      },
+    );
   });
 
   it('rejects missing tasks and invalid workflow order', () => {

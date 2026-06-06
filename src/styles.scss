@@ -682,6 +682,122 @@ textarea:focus {
   line-height: 1.4;
 }
 
+.ai-review-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.ai-review-panel > p {
+  margin: 0;
+  color: #44546a;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.ai-review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ai-review-header h2 {
+  margin: 0;
+}
+
+.ai-review-header strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 58px;
+  height: 58px;
+  border-radius: 8px;
+  background: #1d7a8c;
+  color: #ffffff;
+  font-size: 1.35rem;
+}
+
+.warning-list {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 20px;
+  color: #7a2e0e;
+  font-weight: 800;
+}
+
+.suggestion-list {
+  display: grid;
+  gap: 12px;
+}
+
+.suggestion-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dce3ee;
+  border-left: 5px solid #175cd3;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.suggestion-card.decision-applied {
+  border-left-color: #067647;
+}
+
+.suggestion-card.decision-rejected {
+  border-left-color: #b42318;
+}
+
+.suggestion-card header,
+.suggestion-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.suggestion-card header span,
+.suggestion-card header strong,
+.suggestion-compare span {
+  color: #526274;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.suggestion-card p {
+  margin: 0;
+  color: #44546a;
+  line-height: 1.45;
+}
+
+.suggestion-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.suggestion-compare div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.suggestion-compare pre {
+  min-height: 86px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #d2dbe7;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17202a;
+  font-family: inherit;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 .payload-panel,
 .audit-panel {
   margin-top: 16px;
@@ -766,6 +882,10 @@ textarea:focus {
   }
 
   .status-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .suggestion-compare {
     grid-template-columns: 1fr;
   }
 }
