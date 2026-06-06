@@ -23,6 +23,8 @@ export enum AuditLogEvent {
   AiReviewStarted = 'AI_REVIEW_STARTED',
   AiReviewSuccess = 'AI_REVIEW_SUCCESS',
   AiReviewError = 'AI_REVIEW_ERROR',
+  AiSuggestionApplied = 'AI_SUGGESTION_APPLIED',
+  AiSuggestionRejected = 'AI_SUGGESTION_REJECTED',
   TaskApproved = 'TASK_APPROVED',
   PayloadGenerated = 'PAYLOAD_GENERATED',
   CmsSendStarted = 'CMS_SEND_STARTED',
@@ -71,6 +73,8 @@ export interface CmsPayload {
 export interface AiReviewResult {
   reviewedAt: string;
   summary: string;
+  suggestions: AiSuggestion[];
+  qualityScore: TaskQualityScore;
 }
 
 export interface CmsSendResult {

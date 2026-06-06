@@ -94,6 +94,73 @@
       </aside>
     </section>
 
+    @if (task.qualityScore; as qualityScore) {
+      <section class="workflow-panel ai-review-panel" aria-label="Revisao da IA">
+        <header class="ai-review-header">
+          <div>
+            <p class="eyebrow">IA mockada</p>
+            <h2>Score de qualidade</h2>
+          </div>
+          <strong>{{ qualityScore.score }}</strong>
+        </header>
+
+        <p>{{ qualityScore.summary }}</p>
+
+        @if (qualityScore.warnings.length) {
+          <ul class="warning-list">
+            @for (warning of qualityScore.warnings; track warning) {
+              <li>{{ warning }}</li>
+            }
+          </ul>
+        }
+
+        @if (task.aiSuggestions.length) {
+          <div class="suggestion-list" aria-label="Sugestoes da IA">
+            @for (suggestion of task.aiSuggestions; track suggestion.id) {
+              <article class="suggestion-card" [class]="'decision-' + suggestion.decision">
+                <header>
+                  <span>{{ suggestion.field }}</span>
+                  <strong>{{ suggestion.decision }}</strong>
+                </header>
+
+                <p>{{ suggestion.reason }}</p>
+
+                <div class="suggestion-compare">
+                  <div>
+                    <span>Original</span>
+                    <pre>{{ formatSuggestionValue(suggestion.originalValue) }}</pre>
+                  </div>
+                  <div>
+                    <span>Sugestao</span>
+                    <pre>{{ formatSuggestionValue(suggestion.suggestedValue) }}</pre>
+                  </div>
+                </div>
+
+                @if (suggestion.decision === 'pending') {
+                  <div class="suggestion-actions">
+                    <button
+                      type="button"
+                      class="primary-action"
+                      (click)="applySuggestion(suggestion.id)"
+                    >
+                      Aplicar
+                    </button>
+                    <button
+                      type="button"
+                      class="secondary-action"
+                      (click)="rejectSuggestion(suggestion.id)"
+                    >
+                      Rejeitar
+                    </button>
+                  </div>
+                }
+              </article>
+            }
+          </div>
+        }
+      </section>
+    }
+
     @if (payloadJson()) {
       <section class="workflow-panel payload-panel" aria-label="Payload JSON">
         <h2>Payload JSON</h2>

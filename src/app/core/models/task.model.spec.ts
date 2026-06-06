@@ -43,6 +43,8 @@ describe('task model constants', () => {
       'AI_REVIEW_STARTED',
       'AI_REVIEW_SUCCESS',
       'AI_REVIEW_ERROR',
+      'AI_SUGGESTION_APPLIED',
+      'AI_SUGGESTION_REJECTED',
       'TASK_APPROVED',
       'PAYLOAD_GENERATED',
       'CMS_SEND_STARTED',

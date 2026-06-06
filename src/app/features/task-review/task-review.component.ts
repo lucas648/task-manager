@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { TASK_COLUMNS, TaskStatus } from '../../core/models/task.model';
+import { AiSuggestion, TASK_COLUMNS, TaskStatus } from '../../core/models/task.model';
 import { TaskService } from '../../core/services/task.service';
 import { TaskWorkflowService } from '../../core/services/task-workflow.service';
 
@@ -33,6 +33,14 @@ export class TaskReviewComponent {
     this.setMessage(this.workflowService.approveTask(this.taskId).message);
   }
 
+  protected applySuggestion(suggestionId: string): void {
+    this.setMessage(this.workflowService.applySuggestion(this.taskId, suggestionId).message);
+  }
+
+  protected rejectSuggestion(suggestionId: string): void {
+    this.setMessage(this.workflowService.rejectSuggestion(this.taskId, suggestionId).message);
+  }
+
   protected publishTask(): void {
     this.setMessage(this.workflowService.publishTask(this.taskId).message);
   }
@@ -50,6 +58,10 @@ export class TaskReviewComponent {
     const stepIndex = this.workflowSteps.findIndex((step) => step.status === stepStatus);
 
     return currentIndex > stepIndex && stepIndex >= 0;
+  }
+
+  protected formatSuggestionValue(value: AiSuggestion['suggestedValue']): string {
+    return Array.isArray(value) ? value.join('\n') : value;
   }
 
   private setMessage(message: string): void {

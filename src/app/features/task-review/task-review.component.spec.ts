@@ -60,15 +60,55 @@ function taskWithStatus(status: TaskStatus): Task {
   };
 }
 
+function taskWithAiReview(): Task {
+  return {
+    ...taskWithStatus(TaskStatus.AiReviewed),
+    aiSuggestions: [
+      {
+        id: 'title-suggestion',
+        field: 'title',
+        originalValue: 'Publicar conteudo',
+        suggestedValue: 'Publicar conteudo com objetivo claro',
+        reason: 'Titulo mais claro.',
+        decision: 'pending',
+      },
+      {
+        id: 'criteria-suggestion',
+        field: 'acceptanceCriteria',
+        originalValue: ['Payload aprovado'],
+        suggestedValue: ['Payload validado por negocio'],
+        reason: 'Criterio mais objetivo.',
+        decision: 'pending',
+      },
+      {
+        id: 'applied-suggestion',
+        field: 'description',
+        originalValue: 'Gerar e enviar payload final',
+        suggestedValue: 'Gerar, validar e enviar payload final.',
+        reason: 'Descricao ja aplicada.',
+        decision: 'applied',
+      },
+    ],
+    qualityScore: {
+      score: 88,
+      summary: 'Score 88: existem ajustes recomendados antes da aprovacao.',
+      warnings: ['Descricao pode detalhar mais contexto e impacto.'],
+      evaluatedAt: '2026-06-02T11:00:00.000Z',
+    },
+  };
+}
+
 describe('TaskReviewComponent', () => {
   const tasks = signal<Task[]>([BASE_TASK]);
   const taskService = {
     findTask: vi.fn((taskId: string) => tasks().find((task) => task.id === taskId)),
   };
   const workflowService = {
+    applySuggestion: vi.fn(() => ({ success: true, message: 'aplicada' })),
     approveTask: vi.fn(() => ({ success: true, message: 'aprovada' })),
     completeTask: vi.fn(() => ({ success: true, message: 'concluida' })),
     publishTask: vi.fn(() => ({ success: true, message: 'publicada' })),
+    rejectSuggestion: vi.fn(() => ({ success: true, message: 'rejeitada' })),
     reviewWithAi: vi.fn(() => ({ success: true, message: 'revisada' })),
     startWork: vi.fn(() => ({ success: true, message: 'iniciada' })),
   };
@@ -126,6 +166,36 @@ describe('TaskReviewComponent', () => {
         TaskStatus.Error,
       ),
     ).toBe(false);
+  });
+
+  it('renders AI score and delegates suggestion decisions', () => {
+    tasks.set([taskWithAiReview()]);
+    const fixture = TestBed.createComponent(TaskReviewComponent);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const component = fixture.componentInstance as unknown as {
+      formatSuggestionValue(value: string | string[]): string;
+    };
+
+    expect(element.textContent).toContain('Score de qualidade');
+    expect(element.textContent).toContain('88');
+    expect(element.textContent).toContain('Descricao pode detalhar mais contexto e impacto.');
+    expect(element.textContent).toContain('Titulo mais claro.');
+    expect(component.formatSuggestionValue(['linha um', 'linha dois'])).toBe(
+      'linha um\nlinha dois',
+    );
+    expect(component.formatSuggestionValue('texto simples')).toBe('texto simples');
+
+    const buttons = [...element.querySelectorAll('button')];
+    buttons.find((button) => button.textContent?.includes('Aplicar'))?.click();
+    fixture.detectChanges();
+    expect(workflowService.applySuggestion).toHaveBeenCalledWith('task-id', 'title-suggestion');
+    expect(element.textContent).toContain('aplicada');
+
+    buttons.find((button) => button.textContent?.includes('Rejeitar'))?.click();
+    fixture.detectChanges();
+    expect(workflowService.rejectSuggestion).toHaveBeenCalledWith('task-id', 'title-suggestion');
+    expect(element.textContent).toContain('rejeitada');
   });
 
   it('renders a fallback when the task is missing', () => {

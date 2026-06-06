@@ -1,5 +1,11 @@
 import { inject, Injectable } from '@angular/core';
-import { AuditLogEvent, Task, TaskStatus, WorkflowActionResult } from '../models/task.model';
+import {
+  AiSuggestion,
+  AuditLogEvent,
+  Task,
+  TaskStatus,
+  WorkflowActionResult,
+} from '../models/task.model';
 import { AiReviewService } from './ai-review.service';
 import { CmsService } from './cms.service';
 import { TaskPayloadBuilderService } from './task-payload-builder.service';
@@ -25,6 +31,8 @@ export class TaskWorkflowService {
     const updatedTask = this.taskService.applyWorkflowUpdate(
       taskId,
       {
+        aiSuggestions: review.suggestions,
+        qualityScore: review.qualityScore,
         status: TaskStatus.AiReviewed,
       },
       [
@@ -38,7 +46,12 @@ export class TaskWorkflowService {
         },
         {
           event: AuditLogEvent.AiReviewSuccess,
-          metadata: { summary: review.summary },
+          metadata: {
+            score: review.qualityScore.score,
+            suggestions: review.suggestions.length,
+            summary: review.summary,
+            warnings: review.qualityScore.warnings.length,
+          },
         },
       ],
       review.reviewedAt,
@@ -47,6 +60,87 @@ export class TaskWorkflowService {
     return {
       success: true,
       message: 'Revisao da IA concluida. A task esta pronta para aprovacao humana.',
+      task: updatedTask,
+    };
+  }
+
+  applySuggestion(taskId: string, suggestionId: string): WorkflowActionResult {
+    const task = this.taskService.findTask(taskId);
+    const suggestion = this.findPendingSuggestion(task, suggestionId, 'aplicar');
+
+    if (!suggestion.success || !suggestion.task) {
+      return suggestion;
+    }
+
+    const selectedSuggestion = suggestion.task.aiSuggestions.find(
+      (candidate) => candidate.id === suggestionId,
+    ) as AiSuggestion;
+    const timestamp = new Date().toISOString();
+    const updatedTask = this.taskService.applyWorkflowUpdate(
+      taskId,
+      {
+        ...this.buildSuggestionUpdate(selectedSuggestion),
+        aiSuggestions: this.markSuggestionDecision(
+          suggestion.task.aiSuggestions,
+          suggestionId,
+          'applied',
+        ),
+      },
+      [
+        {
+          event: AuditLogEvent.AiSuggestionApplied,
+          metadata: {
+            field: selectedSuggestion.field,
+            suggestionId,
+          },
+        },
+      ],
+      timestamp,
+    );
+
+    return {
+      success: true,
+      message: 'Sugestao aplicada.',
+      task: updatedTask,
+    };
+  }
+
+  rejectSuggestion(taskId: string, suggestionId: string): WorkflowActionResult {
+    const task = this.taskService.findTask(taskId);
+    const suggestion = this.findPendingSuggestion(task, suggestionId, 'rejeitar');
+
+    if (!suggestion.success || !suggestion.task) {
+      return suggestion;
+    }
+
+    const selectedSuggestion = suggestion.task.aiSuggestions.find(
+      (candidate) => candidate.id === suggestionId,
+    ) as AiSuggestion;
+    const timestamp = new Date().toISOString();
+    const updatedTask = this.taskService.applyWorkflowUpdate(
+      taskId,
+      {
+        aiSuggestions: this.markSuggestionDecision(
+          suggestion.task.aiSuggestions,
+          suggestionId,
+          'rejected',
+        ),
+      },
+      [
+        {
+          event: AuditLogEvent.AiSuggestionRejected,
+          metadata: {
+            field: selectedSuggestion.field,
+            suggestionId,
+          },
+        },
+      ],
+      timestamp,
+    );
+
+    return {
+      success: true,
+      message: 'Sugestao rejeitada.',
       task: updatedTask,
     };
   }
@@ -232,5 +326,76 @@ export class TaskWorkflowService {
       message: '',
       task,
     };
+  }
+
+  private findPendingSuggestion(
+    task: Task | undefined,
+    suggestionId: string,
+    action: string,
+  ): WorkflowActionResult {
+    if (!task) {
+      return {
+        success: false,
+        message: 'Task nao encontrada.',
+      };
+    }
+
+    if (task.status !== TaskStatus.AiReviewed) {
+      return {
+        success: false,
+        message: `A task precisa estar em ${TaskStatus.AiReviewed} para ${action} sugestoes.`,
+        task,
+      };
+    }
+
+    const suggestion = task.aiSuggestions.find((candidate) => candidate.id === suggestionId);
+
+    if (!suggestion) {
+      return {
+        success: false,
+        message: 'Sugestao nao encontrada.',
+        task,
+      };
+    }
+
+    if (suggestion.decision !== 'pending') {
+      return {
+        success: false,
+        message: 'Sugestao ja decidida.',
+        task,
+      };
+    }
+
+    return {
+      success: true,
+      message: '',
+      task,
+    };
+  }
+
+  private buildSuggestionUpdate(suggestion: AiSuggestion): Partial<Task> {
+    if (suggestion.field === 'acceptanceCriteria') {
+      return {
+        acceptanceCriteria: Array.isArray(suggestion.suggestedValue)
+          ? suggestion.suggestedValue
+          : [suggestion.suggestedValue],
+      };
+    }
+
+    return {
+      [suggestion.field]: Array.isArray(suggestion.suggestedValue)
+        ? suggestion.suggestedValue.join('\n')
+        : suggestion.suggestedValue,
+    };
+  }
+
+  private markSuggestionDecision(
+    suggestions: AiSuggestion[],
+    suggestionId: string,
+    decision: AiSuggestion['decision'],
+  ): AiSuggestion[] {
+    return suggestions.map((suggestion) =>
+      suggestion.id === suggestionId ? { ...suggestion, decision } : suggestion,
+    );
   }
 }
