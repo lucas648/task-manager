@@ -18,6 +18,7 @@ describe('App', () => {
           { path: '', component: RouteStubComponent },
           { path: 'tasks', component: RouteStubComponent },
           { path: 'tasks/new', component: RouteStubComponent },
+          { path: 'chaos', component: RouteStubComponent },
         ]),
       ],
     }).compileComponents();
@@ -59,6 +60,7 @@ describe('App', () => {
       { active: false, text: 'Home' },
       { active: false, text: 'Tasks' },
       { active: true, text: 'Nova task' },
+      { active: false, text: 'Chaos' },
     ]);
   });
 });

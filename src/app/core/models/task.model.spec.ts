@@ -1,5 +1,6 @@
 import {
   AuditLogEvent,
+  CHAOS_SCENARIOS,
   FILTER_OPTIONS,
   PRIORITY_LABELS,
   PRIORITY_OPTIONS,
@@ -50,6 +51,8 @@ describe('task model constants', () => {
       'CMS_SEND_STARTED',
       'CMS_SEND_SUCCESS',
       'CMS_SEND_ERROR',
+      'CHAOS_SCENARIO_ENABLED',
+      'CHAOS_SCENARIO_DISABLED',
     ]);
     expect(WORKFLOW_TRANSITIONS).toEqual({
       [TaskStatus.Draft]: TaskStatus.AiReviewed,
@@ -58,6 +61,20 @@ describe('task model constants', () => {
       [TaskStatus.Published]: TaskStatus.InProgress,
       [TaskStatus.InProgress]: TaskStatus.Completed,
     });
+  });
+
+  it('defines the phase 4 chaos scenarios', () => {
+    expect(CHAOS_SCENARIOS.map((scenario) => scenario.id)).toEqual([
+      'ai_unavailable',
+      'ai_slow',
+      'ai_invalid_response',
+      'cms_unavailable',
+      'cms_timeout',
+      'cms_duplicate_payload',
+      'network_loss',
+    ]);
+    expect(CHAOS_SCENARIOS.every((scenario) => !scenario.enabled)).toBe(true);
+    expect(CHAOS_SCENARIOS.every((scenario) => scenario.name && scenario.description)).toBe(true);
   });
 
   it('builds filters from all tasks plus every status', () => {

@@ -7,6 +7,7 @@ import {
   TaskPriority,
   TaskStatus,
 } from '../models/task.model';
+import { AiReviewService } from './ai-review.service';
 import { CmsService } from './cms.service';
 import { TaskPayloadBuilderService } from './task-payload-builder.service';
 import { TaskService } from './task.service';
@@ -315,11 +316,71 @@ describe('TaskWorkflowService', () => {
     );
   });
 
+  it('keeps draft tasks recoverable when AI review fails', () => {
+    setupCrypto('ai-start-log', 'ai-error-log');
+    const failingAiService = {
+      review: vi.fn(() => {
+        throw new Error('IA fora do ar no cenario de caos.');
+      }),
+    };
+    const { taskService, workflowService } = setupWorkflow(
+      [storedTask()],
+      [{ provide: AiReviewService, useValue: failingAiService }],
+    );
+
+    expect(workflowService.reviewWithAi('task-id')).toMatchObject({
+      success: false,
+      message: 'IA fora do ar no cenario de caos.',
+    });
+    expect(taskService.findTask('task-id')).toMatchObject({
+      status: TaskStatus.Draft,
+      aiSuggestions: [],
+      qualityScore: undefined,
+    });
+    expect(taskService.findTask('task-id')?.auditLogs).toEqual([
+      {
+        id: 'ai-start-log',
+        event: AuditLogEvent.AiReviewStarted,
+        taskId: 'task-id',
+        timestamp: TEST_NOW,
+        metadata: { fromStatus: TaskStatus.Draft },
+      },
+      {
+        id: 'ai-error-log',
+        event: AuditLogEvent.AiReviewError,
+        taskId: 'task-id',
+        timestamp: TEST_NOW,
+        metadata: { message: 'IA fora do ar no cenario de caos.' },
+      },
+    ]);
+  });
+
+  it('normalizes non-error AI review exceptions', () => {
+    const failingAiService = {
+      review: vi.fn(() => {
+        throw 'resposta quebrada';
+      }),
+    };
+    const { workflowService } = setupWorkflow(
+      [storedTask()],
+      [{ provide: AiReviewService, useValue: failingAiService }],
+    );
+
+    expect(workflowService.reviewWithAi('task-id')).toMatchObject({
+      success: false,
+      message: 'Nao foi possivel concluir a revisao da IA.',
+    });
+  });
+
   it('rejects missing tasks and invalid workflow order', () => {
     setupCrypto('unused-log');
     const { workflowService } = setupWorkflow([storedTask()]);
 
     expect(workflowService.reviewWithAi('missing')).toEqual({
+      success: false,
+      message: 'Task nao encontrada.',
+    });
+    expect(workflowService.publishTask('missing')).toEqual({
       success: false,
       message: 'Task nao encontrada.',
     });
@@ -364,6 +425,36 @@ describe('TaskWorkflowService', () => {
     expect(taskService.findTask('task-id')).toMatchObject({
       cmsError: 'Falha ao enviar task-id.',
       status: TaskStatus.Error,
+    });
+  });
+
+  it('publishes a task after a previous CMS error is retried', () => {
+    setupCrypto('payload-log', 'cms-start-log', 'published-status-log', 'cms-success-log');
+    const { taskService, workflowService } = setupWorkflow([
+      {
+        ...storedTask(TaskStatus.Error),
+        approvedAt: TEST_NOW,
+        cmsError: 'Timeout simulado durante envio ao CMS.',
+      },
+    ]);
+
+    expect(workflowService.publishTask('task-id')).toMatchObject({
+      success: true,
+      message: 'Payload task-id aceito pelo CMS mockado.',
+    });
+    expect(taskService.findTask('task-id')).toMatchObject({
+      cmsError: undefined,
+      status: TaskStatus.Published,
+    });
+    expect(taskService.findTask('task-id')?.auditLogs.at(-2)).toEqual({
+      id: 'published-status-log',
+      event: AuditLogEvent.StatusChanged,
+      taskId: 'task-id',
+      timestamp: TEST_NOW,
+      metadata: {
+        fromStatus: TaskStatus.Error,
+        toStatus: TaskStatus.Published,
+      },
     });
   });
 
