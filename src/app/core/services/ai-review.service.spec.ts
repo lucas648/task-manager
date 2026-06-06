@@ -1,29 +1,54 @@
-import { TaskPriority, TaskStatus } from '../models/task.model';
+import { TestBed } from '@angular/core/testing';
+import { ChaosScenarioId, Task, TaskPriority, TaskStatus } from '../models/task.model';
 import { AiReviewService } from './ai-review.service';
+import { ChaosService } from './chaos.service';
 
 const REVIEWED_AT = '2026-06-02T12:00:00.000Z';
 
-describe('AiReviewService', () => {
-  it('returns mocked suggestions and quality warnings for a vague task', () => {
-    const service = new AiReviewService();
+function reviewTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: 'task-id',
+    title: 'Bug',
+    description: 'Corrigir',
+    priority: TaskPriority.High,
+    status: TaskStatus.Draft,
+    category: 'Produto',
+    tags: [],
+    acceptanceCriteria: [],
+    createdAt: REVIEWED_AT,
+    updatedAt: REVIEWED_AT,
+    aiSuggestions: [],
+    auditLogs: [],
+    ...overrides,
+  };
+}
 
-    const review = service.review(
+function setupService(enabledScenarios: ChaosScenarioId[] = []): AiReviewService {
+  const enabled = new Set(enabledScenarios);
+
+  TestBed.configureTestingModule({
+    providers: [
+      AiReviewService,
       {
-        id: 'task-id',
-        title: 'Bug',
-        description: 'Corrigir',
-        priority: TaskPriority.High,
-        status: TaskStatus.Draft,
-        category: 'Produto',
-        tags: [],
-        acceptanceCriteria: [],
-        createdAt: REVIEWED_AT,
-        updatedAt: REVIEWED_AT,
-        aiSuggestions: [],
-        auditLogs: [],
+        provide: ChaosService,
+        useValue: {
+          isEnabled: vi.fn((scenarioId: ChaosScenarioId) => enabled.has(scenarioId)),
+        },
       },
-      REVIEWED_AT,
-    );
+    ],
+  });
+
+  return TestBed.inject(AiReviewService);
+}
+
+describe('AiReviewService', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('returns mocked suggestions and quality warnings for a vague task', () => {
+    const service = setupService();
+    const review = service.review(reviewTask(), REVIEWED_AT);
 
     expect(review).toEqual({
       reviewedAt: REVIEWED_AT,
@@ -74,23 +99,15 @@ describe('AiReviewService', () => {
   });
 
   it('returns a perfect mocked score when the task is already detailed', () => {
-    const service = new AiReviewService();
+    const service = setupService();
     const review = service.review(
-      {
-        id: 'task-id',
+      reviewTask({
         title: 'Revisar checkout autenticado',
         description:
           'Validar todo o fluxo de checkout autenticado, incluindo pagamento, pedido criado e mensagem final para o usuario.',
-        priority: TaskPriority.High,
-        status: TaskStatus.Draft,
-        category: 'Produto',
         tags: ['checkout'],
         acceptanceCriteria: ['Pedido criado com sucesso.'],
-        createdAt: REVIEWED_AT,
-        updatedAt: REVIEWED_AT,
-        aiSuggestions: [],
-        auditLogs: [],
-      },
+      }),
       REVIEWED_AT,
     );
 
@@ -101,5 +118,43 @@ describe('AiReviewService', () => {
       evaluatedAt: REVIEWED_AT,
     });
     expect(review.summary).toBe('Revisao da IA gerou 0 alerta(s) e 3 sugestoes.');
+  });
+
+  it('adds a slow response warning when the slow AI scenario is active', () => {
+    const service = setupService(['ai_slow']);
+    const review = service.review(
+      reviewTask({
+        title: 'Revisar checkout autenticado',
+        description:
+          'Validar todo o fluxo de checkout autenticado, incluindo pagamento, pedido criado e mensagem final para o usuario.',
+        tags: ['checkout'],
+        acceptanceCriteria: ['Pedido criado com sucesso.'],
+      }),
+      REVIEWED_AT,
+    );
+
+    expect(review.summary).toBe('Revisao da IA gerou 1 alerta(s) e 3 sugestoes.');
+    expect(review.qualityScore).toEqual({
+      score: 92,
+      summary: 'Score 92: existem ajustes recomendados antes da aprovacao.',
+      warnings: ['Resposta lenta da IA simulada pelo Chaos Dashboard.'],
+      evaluatedAt: REVIEWED_AT,
+    });
+  });
+
+  it('throws controlled errors for blocking AI chaos scenarios', () => {
+    expect(() => setupService(['network_loss']).review(reviewTask(), REVIEWED_AT)).toThrow(
+      'Perda de conexao simulada durante revisao da IA.',
+    );
+
+    TestBed.resetTestingModule();
+    expect(() => setupService(['ai_unavailable']).review(reviewTask(), REVIEWED_AT)).toThrow(
+      'IA fora do ar no cenario de caos.',
+    );
+
+    TestBed.resetTestingModule();
+    expect(() => setupService(['ai_invalid_response']).review(reviewTask(), REVIEWED_AT)).toThrow(
+      'Resposta invalida da IA no cenario de caos.',
+    );
   });
 });

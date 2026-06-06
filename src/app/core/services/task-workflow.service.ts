@@ -27,41 +27,67 @@ export class TaskWorkflowService {
     }
 
     const reviewedAt = new Date().toISOString();
-    const review = this.aiReviewService.review(task as Task, reviewedAt);
-    const updatedTask = this.taskService.applyWorkflowUpdate(
-      taskId,
-      {
-        aiSuggestions: review.suggestions,
-        qualityScore: review.qualityScore,
-        status: TaskStatus.AiReviewed,
-      },
-      [
+    try {
+      const review = this.aiReviewService.review(task as Task, reviewedAt);
+      const updatedTask = this.taskService.applyWorkflowUpdate(
+        taskId,
         {
-          event: AuditLogEvent.AiReviewStarted,
-          metadata: { fromStatus: TaskStatus.Draft },
+          aiSuggestions: review.suggestions,
+          qualityScore: review.qualityScore,
+          status: TaskStatus.AiReviewed,
         },
-        {
-          event: AuditLogEvent.StatusChanged,
-          metadata: { fromStatus: TaskStatus.Draft, toStatus: TaskStatus.AiReviewed },
-        },
-        {
-          event: AuditLogEvent.AiReviewSuccess,
-          metadata: {
-            score: review.qualityScore.score,
-            suggestions: review.suggestions.length,
-            summary: review.summary,
-            warnings: review.qualityScore.warnings.length,
+        [
+          {
+            event: AuditLogEvent.AiReviewStarted,
+            metadata: { fromStatus: TaskStatus.Draft },
           },
-        },
-      ],
-      review.reviewedAt,
-    );
+          {
+            event: AuditLogEvent.StatusChanged,
+            metadata: { fromStatus: TaskStatus.Draft, toStatus: TaskStatus.AiReviewed },
+          },
+          {
+            event: AuditLogEvent.AiReviewSuccess,
+            metadata: {
+              score: review.qualityScore.score,
+              suggestions: review.suggestions.length,
+              summary: review.summary,
+              warnings: review.qualityScore.warnings.length,
+            },
+          },
+        ],
+        review.reviewedAt,
+      );
 
-    return {
-      success: true,
-      message: 'Revisao da IA concluida. A task esta pronta para aprovacao humana.',
-      task: updatedTask,
-    };
+      return {
+        success: true,
+        message: 'Revisao da IA concluida. A task esta pronta para aprovacao humana.',
+        task: updatedTask,
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Nao foi possivel concluir a revisao da IA.';
+      const updatedTask = this.taskService.applyWorkflowUpdate(
+        taskId,
+        {},
+        [
+          {
+            event: AuditLogEvent.AiReviewStarted,
+            metadata: { fromStatus: TaskStatus.Draft },
+          },
+          {
+            event: AuditLogEvent.AiReviewError,
+            metadata: { message },
+          },
+        ],
+        reviewedAt,
+      );
+
+      return {
+        success: false,
+        message,
+        task: updatedTask,
+      };
+    }
   }
 
   applySuggestion(taskId: string, suggestionId: string): WorkflowActionResult {
@@ -182,7 +208,7 @@ export class TaskWorkflowService {
 
   publishTask(taskId: string): WorkflowActionResult {
     const task = this.taskService.findTask(taskId);
-    const canContinue = this.ensureStatus(task, TaskStatus.Approved, 'publicar');
+    const canContinue = this.ensurePublishable(task);
 
     if (!canContinue.success) {
       return canContinue;
@@ -192,6 +218,7 @@ export class TaskWorkflowService {
       const publishedAt = new Date().toISOString();
       const payload = this.payloadBuilder.build(task as Task);
       const result = this.cmsService.send(payload, publishedAt);
+      const fromStatus = (task as Task).status;
 
       if (!result.success) {
         const errorTask = this.taskService.applyWorkflowUpdate(
@@ -205,7 +232,7 @@ export class TaskWorkflowService {
             { event: AuditLogEvent.CmsSendStarted, metadata: { externalId: payload.externalId } },
             {
               event: AuditLogEvent.StatusChanged,
-              metadata: { fromStatus: TaskStatus.Approved, toStatus: TaskStatus.Error },
+              metadata: { fromStatus, toStatus: TaskStatus.Error },
             },
             { event: AuditLogEvent.CmsSendError, metadata: { message: result.message } },
           ],
@@ -233,7 +260,7 @@ export class TaskWorkflowService {
           { event: AuditLogEvent.CmsSendStarted, metadata: { externalId: payload.externalId } },
           {
             event: AuditLogEvent.StatusChanged,
-            metadata: { fromStatus: TaskStatus.Approved, toStatus: TaskStatus.Published },
+            metadata: { fromStatus, toStatus: TaskStatus.Published },
           },
           { event: AuditLogEvent.CmsSendSuccess, metadata: { statusCode: result.statusCode } },
         ],
@@ -317,6 +344,29 @@ export class TaskWorkflowService {
       return {
         success: false,
         message: `A task precisa estar em ${expectedStatus} para ${action}.`,
+        task,
+      };
+    }
+
+    return {
+      success: true,
+      message: '',
+      task,
+    };
+  }
+
+  private ensurePublishable(task: Task | undefined): WorkflowActionResult {
+    if (!task) {
+      return {
+        success: false,
+        message: 'Task nao encontrada.',
+      };
+    }
+
+    if (task.status !== TaskStatus.Approved && task.status !== TaskStatus.Error) {
+      return {
+        success: false,
+        message: `A task precisa estar em ${TaskStatus.Approved} para publicar.`,
         task,
       };
     }

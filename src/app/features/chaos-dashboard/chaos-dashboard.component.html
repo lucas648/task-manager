@@ -1,0 +1,56 @@
+<main class="task-shell">
+  <header class="screen-header">
+    <div>
+      <p class="eyebrow">Chaos Engineering</p>
+      <h1>Chaos Dashboard</h1>
+    </div>
+
+    <a class="secondary-action action-link" routerLink="/tasks">Voltar para tasks</a>
+  </header>
+
+  <section class="chaos-summary" aria-label="Resumo do caos">
+    <article>
+      <span>Cenarios ativos</span>
+      <strong>{{ chaosService.activeCount() }}</strong>
+    </article>
+
+    <button type="button" class="secondary-action" (click)="resetScenarios()">
+      Desativar todos
+    </button>
+  </section>
+
+  <section class="chaos-grid" aria-label="Cenarios de caos">
+    @for (scenario of chaosService.scenarios(); track scenario.id) {
+      <article class="chaos-card" [class.is-active]="scenario.enabled">
+        <div>
+          <p>{{ scenario.name }}</p>
+          <span>{{ scenario.description }}</span>
+        </div>
+
+        <label class="chaos-toggle">
+          <input
+            type="checkbox"
+            [checked]="scenario.enabled"
+            (change)="setScenario(scenario.id, $any($event.target).checked)"
+          />
+          <span>{{ scenario.enabled ? 'Ativo' : 'Inativo' }}</span>
+        </label>
+      </article>
+    }
+  </section>
+
+  <section class="workflow-panel audit-panel" aria-label="Logs de caos">
+    <h2>Eventos de caos</h2>
+
+    <ol>
+      @for (log of chaosService.auditLogs(); track log.id) {
+        <li>
+          <strong>{{ log.event }}</strong>
+          <span>{{ log.timestamp | date: 'dd/MM/yyyy HH:mm' }}</span>
+        </li>
+      } @empty {
+        <li>Sem eventos registrados.</li>
+      }
+    </ol>
+  </section>
+</main>

@@ -1,23 +1,42 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { AiReviewResult, AiSuggestion, Task, TaskQualityScore } from '../models/task.model';
+import { ChaosService } from './chaos.service';
 
 @Injectable({ providedIn: 'root' })
 export class AiReviewService {
+  private readonly chaosService = inject(ChaosService);
+
   review(task: Task, reviewedAt = new Date().toISOString()): AiReviewResult {
+    if (this.chaosService.isEnabled('network_loss')) {
+      throw new Error('Perda de conexao simulada durante revisao da IA.');
+    }
+
+    if (this.chaosService.isEnabled('ai_unavailable')) {
+      throw new Error('IA fora do ar no cenario de caos.');
+    }
+
+    if (this.chaosService.isEnabled('ai_invalid_response')) {
+      throw new Error('Resposta invalida da IA no cenario de caos.');
+    }
+
     const warnings = this.buildWarnings(task);
-    const score = 100 - warnings.length * 12;
+    const chaosWarnings = this.chaosService.isEnabled('ai_slow')
+      ? ['Resposta lenta da IA simulada pelo Chaos Dashboard.']
+      : [];
+    const allWarnings = [...warnings, ...chaosWarnings];
+    const score = Math.max(0, 100 - warnings.length * 12 - chaosWarnings.length * 8);
     const qualityScore: TaskQualityScore = {
       score,
-      summary: warnings.length
+      summary: allWarnings.length
         ? `Score ${score}: existem ajustes recomendados antes da aprovacao.`
         : `Score ${score}: task clara e pronta para aprovacao humana.`,
-      warnings,
+      warnings: allWarnings,
       evaluatedAt: reviewedAt,
     };
 
     return {
       reviewedAt,
-      summary: `Revisao da IA gerou ${warnings.length} alerta(s) e 3 sugestoes.`,
+      summary: `Revisao da IA gerou ${allWarnings.length} alerta(s) e 3 sugestoes.`,
       suggestions: this.buildSuggestions(task),
       qualityScore,
     };

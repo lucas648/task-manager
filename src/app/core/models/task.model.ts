@@ -30,10 +30,20 @@ export enum AuditLogEvent {
   CmsSendStarted = 'CMS_SEND_STARTED',
   CmsSendSuccess = 'CMS_SEND_SUCCESS',
   CmsSendError = 'CMS_SEND_ERROR',
+  ChaosScenarioEnabled = 'CHAOS_SCENARIO_ENABLED',
+  ChaosScenarioDisabled = 'CHAOS_SCENARIO_DISABLED',
 }
 
 export type TaskFilter = 'all' | TaskStatus;
 export type SuggestionDecision = 'pending' | 'applied' | 'rejected';
+export type ChaosScenarioId =
+  | 'ai_unavailable'
+  | 'ai_slow'
+  | 'ai_invalid_response'
+  | 'cms_unavailable'
+  | 'cms_timeout'
+  | 'cms_duplicate_payload'
+  | 'network_loss';
 
 export interface AuditLog {
   id: string;
@@ -85,7 +95,7 @@ export interface CmsSendResult {
 }
 
 export interface ChaosScenario {
-  id: string;
+  id: ChaosScenarioId;
   name: string;
   description: string;
   enabled: boolean;
@@ -210,6 +220,51 @@ export const WORKFLOW_TRANSITIONS: Partial<Record<TaskStatus, TaskStatus>> = {
   [TaskStatus.Published]: TaskStatus.InProgress,
   [TaskStatus.InProgress]: TaskStatus.Completed,
 };
+
+export const CHAOS_SCENARIOS: ChaosScenario[] = [
+  {
+    id: 'ai_unavailable',
+    name: 'IA fora do ar',
+    description: 'Interrompe a revisao por IA antes de gerar sugestoes.',
+    enabled: false,
+  },
+  {
+    id: 'ai_slow',
+    name: 'IA lenta',
+    description: 'Marca a revisao como lenta e reduz o score de qualidade.',
+    enabled: false,
+  },
+  {
+    id: 'ai_invalid_response',
+    name: 'Resposta invalida da IA',
+    description: 'Faz a revisao falhar por payload de IA inconsistente.',
+    enabled: false,
+  },
+  {
+    id: 'cms_unavailable',
+    name: 'CMS fora do ar',
+    description: 'Retorna indisponibilidade no envio ao CMS mockado.',
+    enabled: false,
+  },
+  {
+    id: 'cms_timeout',
+    name: 'Timeout no envio',
+    description: 'Simula estouro de tempo durante publicacao.',
+    enabled: false,
+  },
+  {
+    id: 'cms_duplicate_payload',
+    name: 'Payload duplicado',
+    description: 'Retorna conflito de payload ja publicado.',
+    enabled: false,
+  },
+  {
+    id: 'network_loss',
+    name: 'Perda de conexao',
+    description: 'Interrompe chamadas de IA e CMS por conexao indisponivel.',
+    enabled: false,
+  },
+];
 
 export const STARTER_TASKS: Task[] = [
   {
