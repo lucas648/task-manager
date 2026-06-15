@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AnalyticsDashboardComponent } from './features/analytics-dashboard/analytics-dashboard.component';
 import { ChaosDashboardComponent } from './features/chaos-dashboard/chaos-dashboard.component';
 import { HomeComponent } from './features/home/home.component';
 import { TaskCreateComponent } from './features/task-create/task-create.component';
@@ -25,6 +26,10 @@ export const routes: Routes = [
   {
     path: 'chaos',
     component: ChaosDashboardComponent,
+  },
+  {
+    path: 'analytics',
+    component: AnalyticsDashboardComponent,
   },
   {
     path: '**',

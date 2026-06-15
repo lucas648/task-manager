@@ -1,0 +1,98 @@
+<main class="task-shell">
+  <header class="screen-header">
+    <div>
+      <p class="eyebrow">Observabilidade</p>
+      <h1>Analytics Dashboard</h1>
+    </div>
+
+    <div class="home-actions" aria-label="Acoes de analytics">
+      <a class="secondary-action action-link" routerLink="/tasks">Ver tasks</a>
+      <a class="secondary-action action-link" routerLink="/chaos">Ver chaos</a>
+    </div>
+  </header>
+
+  @let summary = analyticsService.summary();
+
+  <section class="analytics-summary" aria-label="Resumo operacional">
+    <article>
+      <span>Total de tasks</span>
+      <strong>{{ summary.totalTasks }}</strong>
+    </article>
+    <article>
+      <span>Logs registrados</span>
+      <strong>{{ summary.totalAuditLogs }}</strong>
+    </article>
+    <article>
+      <span>Falhas IA</span>
+      <strong>{{ summary.aiFailures }}</strong>
+    </article>
+    <article>
+      <span>Falhas CMS</span>
+      <strong>{{ summary.cmsFailures }}</strong>
+    </article>
+    <article>
+      <span>Eventos chaos</span>
+      <strong>{{ summary.chaosEvents }}</strong>
+    </article>
+    <article>
+      <span>Taxa sugestoes</span>
+      <strong>{{ summary.suggestionAcceptanceRate }}%</strong>
+    </article>
+    <article>
+      <span>Sugestoes aceitas</span>
+      <strong>{{ summary.acceptedSuggestions }}</strong>
+    </article>
+    <article>
+      <span>Tempo aprovacao</span>
+      <strong>{{ summary.averageApprovalMinutes }} min</strong>
+    </article>
+  </section>
+
+  <section class="analytics-layout" aria-label="Indicadores detalhados">
+    <section class="workflow-panel status-metrics-panel">
+      <h2>Distribuicao por status</h2>
+
+      <div class="status-metrics">
+        @for (metric of summary.statusMetrics; track metric.status) {
+          <article class="status-metric" [class]="metric.status">
+            <div>
+              <strong>{{ metric.label }}</strong>
+              <span>{{ metric.count }} tasks</span>
+            </div>
+
+            <div
+              class="metric-bar"
+              role="progressbar"
+              [attr.aria-label]="metric.label"
+              [attr.aria-valuenow]="metric.percentage"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <span [style.width.%]="metric.percentage"></span>
+            </div>
+
+            <small>{{ metric.percentage }}%</small>
+          </article>
+        }
+      </div>
+    </section>
+
+    <section class="workflow-panel audit-panel analytics-events-panel">
+      <h2>Eventos recentes</h2>
+
+      <ol>
+        @for (event of summary.recentEvents; track event.id) {
+          <li>
+            <div>
+              <strong>{{ event.event }}</strong>
+              <span>{{ event.taskId }}</span>
+            </div>
+            <span>{{ event.timestamp | date: 'dd/MM/yyyy HH:mm' }}</span>
+          </li>
+        } @empty {
+          <li>Sem eventos recentes.</li>
+        }
+      </ol>
+    </section>
+  </section>
+</main>

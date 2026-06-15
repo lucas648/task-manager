@@ -162,6 +162,27 @@ export interface WorkflowActionResult {
   payload?: CmsPayload;
 }
 
+export interface StatusMetric {
+  status: TaskStatus;
+  label: string;
+  count: number;
+  percentage: number;
+}
+
+export interface AnalyticsSummary {
+  totalTasks: number;
+  totalAuditLogs: number;
+  aiFailures: number;
+  cmsFailures: number;
+  chaosEvents: number;
+  acceptedSuggestions: number;
+  rejectedSuggestions: number;
+  suggestionAcceptanceRate: number;
+  averageApprovalMinutes: number;
+  statusMetrics: StatusMetric[];
+  recentEvents: AuditLog[];
+}
+
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   [TaskStatus.Draft]: 'Draft',
   [TaskStatus.AiReviewed]: 'AI Reviewed',
