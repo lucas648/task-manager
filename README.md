@@ -28,6 +28,7 @@ As imagens abaixo sao geradas a partir do app local durante a fase final de poli
 - Chaos Dashboard para ativar cenarios de falha de IA, CMS e rede.
 - Analytics Dashboard com metricas de status, falhas, sugestoes e tempo ate aprovacao.
 - Kanban com Angular CDK Drag and Drop e audit log de movimentacao.
+- Dark mode e light mode com preferencia persistida no navegador.
 - Cobertura de testes unitarios em 100%.
 
 ## Rotas

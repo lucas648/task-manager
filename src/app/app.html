@@ -26,6 +26,16 @@
       Analytics
     </a>
   </nav>
+
+  <button
+    type="button"
+    class="theme-toggle"
+    (click)="themeService.toggleTheme()"
+    [attr.aria-pressed]="themeService.isDarkMode()"
+    [attr.aria-label]="themeService.isDarkMode() ? 'Ativar modo claro' : 'Ativar modo escuro'"
+  >
+    {{ themeService.isDarkMode() ? 'Modo claro' : 'Modo escuro' }}
+  </button>
 </header>
 
 <router-outlet />
