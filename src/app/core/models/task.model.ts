@@ -170,6 +170,47 @@ export interface StatusMetric {
   percentage: number;
 }
 
+export interface TaskStatusDuration {
+  status: TaskStatus;
+  label: string;
+  startedAt: string;
+  endedAt?: string;
+  durationMinutes: number;
+  durationLabel: string;
+  isCurrent: boolean;
+}
+
+export interface TaskBoardTimeMetric {
+  taskId: string;
+  taskTitle: string;
+  currentStatus: TaskStatus;
+  statusStartedAt: string;
+  currentAgeMinutes: number;
+  currentAgeLabel: string;
+  thresholdMinutes?: number;
+  isOverThreshold: boolean;
+  durations: TaskStatusDuration[];
+}
+
+export interface BoardStatusTimeMetric {
+  status: TaskStatus;
+  label: string;
+  averageMinutes: number;
+  averageLabel: string;
+  longestMinutes: number;
+  longestLabel: string;
+  longestTaskId?: string;
+  longestTaskTitle?: string;
+  thresholdMinutes?: number;
+  overThresholdCount: number;
+}
+
+export interface BoardTimeSummary {
+  generatedAt: string;
+  taskMetrics: TaskBoardTimeMetric[];
+  statusMetrics: BoardStatusTimeMetric[];
+}
+
 export interface AnalyticsSummary {
   totalTasks: number;
   totalAuditLogs: number;
@@ -181,6 +222,7 @@ export interface AnalyticsSummary {
   suggestionAcceptanceRate: number;
   averageApprovalMinutes: number;
   statusMetrics: StatusMetric[];
+  boardTime: BoardTimeSummary;
   recentEvents: AuditLog[];
 }
 
@@ -225,6 +267,14 @@ export const PRIORITY_OPTIONS: PriorityOption[] = Object.values(TaskPriority).ma
 }));
 
 export const FILTER_OPTIONS: FilterOption[] = [{ value: 'all', label: 'Todas' }, ...STATUS_OPTIONS];
+
+export const BOARD_STATUS_THRESHOLDS_MINUTES: Partial<Record<TaskStatus, number>> = {
+  [TaskStatus.Draft]: 1440,
+  [TaskStatus.AiReviewed]: 720,
+  [TaskStatus.Approved]: 1440,
+  [TaskStatus.Published]: 480,
+  [TaskStatus.InProgress]: 4320,
+};
 
 export const TASK_COLUMNS: TaskColumn[] = [
   { status: TaskStatus.Draft, label: 'Draft', caption: 'Aguardando revisão' },

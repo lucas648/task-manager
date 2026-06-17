@@ -10,9 +10,11 @@ import {
   STATUS_LABELS,
   TASK_COLUMNS,
   Task,
+  TaskBoardTimeMetric,
   TaskFilter,
   TaskStatus,
 } from '../../core/models/task.model';
+import { BoardAnalyticsService } from '../../core/services/board-analytics.service';
 import { TaskService } from '../../core/services/task.service';
 
 @Component({
@@ -22,6 +24,7 @@ import { TaskService } from '../../core/services/task.service';
 })
 export class TaskListComponent {
   protected readonly taskService = inject(TaskService);
+  private readonly boardAnalyticsService = inject(BoardAnalyticsService);
   protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly priorityLabels = PRIORITY_LABELS;
@@ -47,6 +50,15 @@ export class TaskListComponent {
     () => this.filter() !== 'all' || !!this.searchTerm().trim(),
   );
   protected readonly hasFilteredTasks = computed(() => this.filteredTasks().length > 0);
+  protected readonly boardTimeMetrics = computed(() =>
+    this.boardAnalyticsService
+      .summarize(this.filteredTasks())
+      .taskMetrics.reduce<Record<string, TaskBoardTimeMetric>>((metrics, metric) => {
+        metrics[metric.taskId] = metric;
+
+        return metrics;
+      }, {}),
+  );
 
   protected setFilter(filter: TaskFilter): void {
     this.filter.set(filter);

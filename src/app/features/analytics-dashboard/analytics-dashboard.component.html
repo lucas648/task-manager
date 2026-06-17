@@ -77,6 +77,28 @@
       </div>
     </section>
 
+    <section class="workflow-panel status-time-panel">
+      <h2>Tempo por baia</h2>
+
+      <div class="status-metrics">
+        @for (metric of summary.boardTime.statusMetrics; track metric.status) {
+          <article class="status-metric" [class]="metric.status">
+            <div>
+              <strong>{{ metric.label }}</strong>
+              <span>Media {{ metric.averageLabel }}</span>
+            </div>
+
+            <div>
+              <strong>{{ metric.longestLabel }}</strong>
+              <span>{{ metric.longestTaskTitle ?? 'Sem tasks' }}</span>
+            </div>
+
+            <small>{{ metric.overThresholdCount }} acima</small>
+          </article>
+        }
+      </div>
+    </section>
+
     <section class="workflow-panel audit-panel analytics-events-panel">
       <h2>Eventos recentes</h2>
 

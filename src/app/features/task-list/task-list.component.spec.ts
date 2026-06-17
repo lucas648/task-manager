@@ -100,6 +100,8 @@ describe('TaskListComponent', () => {
   };
 
   beforeEach(async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-30T09:00:00.000Z'));
     tasks.set([...LIST_TASKS]);
     taskService.changeStatus.mockClear();
     taskService.moveTask.mockClear();
@@ -119,6 +121,7 @@ describe('TaskListComponent', () => {
 
   afterEach(() => {
     TestBed.resetTestingModule();
+    vi.useRealTimers();
   });
 
   it('renders primary workflow columns and task metadata by default', () => {
@@ -139,6 +142,9 @@ describe('TaskListComponent', () => {
     expect(element.textContent).toContain('Media');
     expect(element.textContent).toContain('Draft');
     expect(element.textContent).toContain('Prioridades revisadas');
+    expect(element.textContent).toContain('Na baia ha 1 d');
+    expect(element.textContent).toContain('Acima do limite da baia');
+    expect(element.querySelectorAll('.task-card.is-over-threshold').length).toBe(1);
     expect(element.textContent).toContain('1 logs de auditoria');
     expect(element.querySelector('article.task-card a')?.getAttribute('href')).toBe(
       '/tasks/draft/review',

@@ -20,6 +20,33 @@ const ANALYTICS_SUMMARY: AnalyticsSummary = {
     { status: TaskStatus.Approved, label: 'Approved', count: 1, percentage: 25 },
     { status: TaskStatus.Error, label: 'Error', count: 1, percentage: 25 },
   ],
+  boardTime: {
+    generatedAt: '2026-06-06T14:00:00.000Z',
+    taskMetrics: [],
+    statusMetrics: [
+      {
+        status: TaskStatus.Draft,
+        label: 'Draft',
+        averageMinutes: 120,
+        averageLabel: '2 h',
+        longestMinutes: 240,
+        longestLabel: '4 h',
+        longestTaskId: 'task-id',
+        longestTaskTitle: 'Planejar backlog',
+        thresholdMinutes: 1440,
+        overThresholdCount: 1,
+      },
+      {
+        status: TaskStatus.Completed,
+        label: 'Completed',
+        averageMinutes: 0,
+        averageLabel: '0 min',
+        longestMinutes: 0,
+        longestLabel: '0 min',
+        overThresholdCount: 0,
+      },
+    ],
+  },
   recentEvents: [
     {
       id: 'recent-event',
@@ -87,6 +114,9 @@ describe('AnalyticsDashboardComponent', () => {
     ]);
     expect(textContent(element)).toContain('Draft2 tasks');
     expect(textContent(element)).toContain('Approved1 tasks');
+    expect(textContent(element)).toContain('Tempo por baia');
+    expect(textContent(element)).toContain('DraftMedia 2 h4 hPlanejar backlog1 acima');
+    expect(textContent(element)).toContain('CompletedMedia 0 min0 minSem tasks0 acima');
     expect(textContent(element)).toContain('CMS_SEND_ERROR');
     expect(links).toEqual([
       { href: '/tasks', text: 'Ver tasks' },
