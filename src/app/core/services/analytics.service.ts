@@ -7,6 +7,7 @@ import {
   Task,
   TaskStatus,
 } from '../models/task.model';
+import { BoardAnalyticsService } from './board-analytics.service';
 import { ChaosService } from './chaos.service';
 import { TaskService } from './task.service';
 
@@ -16,6 +17,7 @@ const RECENT_EVENTS_LIMIT = 8;
 export class AnalyticsService {
   private readonly taskService = inject(TaskService);
   private readonly chaosService = inject(ChaosService);
+  private readonly boardAnalyticsService = inject(BoardAnalyticsService);
 
   readonly summary = computed<AnalyticsSummary>(() => {
     const tasks = this.taskService.tasks();
@@ -47,6 +49,7 @@ export class AnalyticsService {
           percentage: this.calculatePercentage(count, totalTasks),
         };
       }),
+      boardTime: this.boardAnalyticsService.summarize(tasks),
       recentEvents: this.sortRecentEvents(allLogs).slice(0, RECENT_EVENTS_LIMIT),
     };
   });

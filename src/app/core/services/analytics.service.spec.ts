@@ -46,6 +46,8 @@ describe('AnalyticsService', () => {
   };
 
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-06T14:00:00.000Z'));
     tasks.set([]);
     chaosLogs.set([]);
 
@@ -66,6 +68,7 @@ describe('AnalyticsService', () => {
 
   afterEach(() => {
     TestBed.resetTestingModule();
+    vi.useRealTimers();
   });
 
   it('aggregates task, AI, CMS, suggestion, approval, chaos, and recent-event metrics', () => {
@@ -187,6 +190,24 @@ describe('AnalyticsService', () => {
       { status: TaskStatus.Rejected, label: 'Rejected', count: 0, percentage: 0 },
       { status: TaskStatus.Error, label: 'Error', count: 1, percentage: 20 },
     ]);
+    expect(summary.boardTime.generatedAt).toBe('2026-06-06T14:00:00.000Z');
+    expect(summary.boardTime.taskMetrics).toHaveLength(5);
+    expect(
+      summary.boardTime.taskMetrics.find((metric) => metric.taskId === 'draft-task'),
+    ).toMatchObject({
+      currentStatus: TaskStatus.Draft,
+      currentAgeMinutes: 240,
+      currentAgeLabel: '4 h',
+      isOverThreshold: false,
+    });
+    expect(
+      summary.boardTime.statusMetrics.find((metric) => metric.status === TaskStatus.Draft),
+    ).toMatchObject({
+      averageMinutes: 240,
+      averageLabel: '4 h',
+      longestTaskId: 'draft-task',
+      overThresholdCount: 0,
+    });
     expect(summary.recentEvents.map((event) => event.id)).toEqual([
       'status-log',
       'approved-log',
@@ -216,5 +237,12 @@ describe('AnalyticsService', () => {
     });
     expect(summary.statusMetrics.every((metric) => metric.count === 0)).toBe(true);
     expect(summary.statusMetrics.every((metric) => metric.percentage === 0)).toBe(true);
+    expect(summary.boardTime).toMatchObject({
+      generatedAt: '2026-06-06T14:00:00.000Z',
+      taskMetrics: [],
+    });
+    expect(summary.boardTime.statusMetrics.every((metric) => metric.averageMinutes === 0)).toBe(
+      true,
+    );
   });
 });

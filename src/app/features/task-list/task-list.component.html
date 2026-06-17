@@ -63,11 +63,13 @@
             (cdkDropListDropped)="dropTask($event, column.status)"
           >
             @for (task of tasksByStatus(column.status); track task.id) {
+              @let timeMetric = boardTimeMetrics()[task.id];
               <article
                 class="task-card"
                 cdkDrag
                 [cdkDragData]="task"
                 [class.is-done]="task.status === 'completed'"
+                [class.is-over-threshold]="timeMetric?.isOverThreshold"
               >
                 <div class="task-card-header">
                   <button
@@ -126,8 +128,15 @@
                 <div class="task-meta">
                   <span>Criada {{ task.createdAt | date: 'dd/MM HH:mm' }}</span>
                   <span>Atualizada {{ task.updatedAt | date: 'dd/MM HH:mm' }}</span>
+                  @if (timeMetric) {
+                    <span>Na baia ha {{ timeMetric.currentAgeLabel }}</span>
+                  }
                   <span>{{ task.auditLogs.length }} logs de auditoria</span>
                 </div>
+
+                @if (timeMetric?.isOverThreshold) {
+                  <p class="task-time-alert">Acima do limite da baia</p>
+                }
 
                 <label class="status-select">
                   <span>Status</span>

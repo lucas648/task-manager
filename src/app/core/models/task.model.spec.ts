@@ -1,5 +1,6 @@
 import {
   AuditLogEvent,
+  BOARD_STATUS_THRESHOLDS_MINUTES,
   CHAOS_SCENARIOS,
   FILTER_OPTIONS,
   PRIORITY_LABELS,
@@ -95,6 +96,19 @@ describe('task model constants', () => {
       WORKFLOW_STATUS_OPTIONS.map((option) => option.value),
     );
     expect(TASK_COLUMNS.every((column) => column.label && column.caption)).toBe(true);
+  });
+
+  it('defines board time thresholds for active workflow statuses', () => {
+    expect(BOARD_STATUS_THRESHOLDS_MINUTES).toEqual({
+      [TaskStatus.Draft]: 1440,
+      [TaskStatus.AiReviewed]: 720,
+      [TaskStatus.Approved]: 1440,
+      [TaskStatus.Published]: 480,
+      [TaskStatus.InProgress]: 4320,
+    });
+    expect(BOARD_STATUS_THRESHOLDS_MINUTES[TaskStatus.Completed]).toBeUndefined();
+    expect(BOARD_STATUS_THRESHOLDS_MINUTES[TaskStatus.Rejected]).toBeUndefined();
+    expect(BOARD_STATUS_THRESHOLDS_MINUTES[TaskStatus.Error]).toBeUndefined();
   });
 
   it('seeds starter tasks with enriched task data', () => {

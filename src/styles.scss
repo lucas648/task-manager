@@ -500,6 +500,11 @@ textarea:focus {
   background: var(--surface);
 }
 
+.task-card.is-over-threshold {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
 .task-card.cdk-drag-preview {
   box-shadow: 0 18px 44px var(--drag-shadow);
 }
@@ -636,6 +641,13 @@ textarea:focus {
   color: var(--text-soft);
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.task-time-alert {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: 0.82rem;
+  font-weight: 900;
 }
 
 .status-select {
