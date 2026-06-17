@@ -9,8 +9,32 @@ import { App } from './app';
 })
 class RouteStubComponent {}
 
+const THEME_STORAGE_KEY = 'taskflow.theme';
+
+function setupThemeStorage(initialValue: string | null = null) {
+  let storedValue = initialValue;
+
+  vi.stubGlobal('localStorage', {
+    getItem: vi.fn((key: string) => (key === THEME_STORAGE_KEY ? storedValue : null)),
+    removeItem: vi.fn((key: string) => {
+      if (key === THEME_STORAGE_KEY) {
+        storedValue = null;
+      }
+    }),
+    setItem: vi.fn((key: string, value: string) => {
+      if (key === THEME_STORAGE_KEY) {
+        storedValue = value;
+      }
+    }),
+  });
+}
+
 describe('App', () => {
   beforeEach(async () => {
+    setupThemeStorage();
+    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.style.colorScheme = '';
+
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
@@ -27,6 +51,7 @@ describe('App', () => {
 
   afterEach(() => {
     TestBed.resetTestingModule();
+    vi.unstubAllGlobals();
   });
 
   it('should create the app', () => {
@@ -64,5 +89,28 @@ describe('App', () => {
       { active: false, text: 'Chaos' },
       { active: false, text: 'Analytics' },
     ]);
+  });
+
+  it('should toggle and persist the app theme', async () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    TestBed.tick();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const toggle = compiled.querySelector<HTMLButtonElement>('.theme-toggle');
+
+    expect(toggle?.textContent?.trim()).toBe('Modo escuro');
+    expect(toggle?.getAttribute('aria-pressed')).toBe('false');
+    expect(document.documentElement.dataset['theme']).toBe('light');
+
+    toggle?.click();
+    fixture.detectChanges();
+    TestBed.tick();
+
+    expect(toggle?.textContent?.trim()).toBe('Modo claro');
+    expect(toggle?.getAttribute('aria-pressed')).toBe('true');
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+    expect(localStorage.getItem('taskflow.theme')).toBe('dark');
   });
 });

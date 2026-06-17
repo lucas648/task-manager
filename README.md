@@ -1,59 +1,145 @@
-# CmsAiPortal
+# TaskFlow AI
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.11.
+TaskFlow AI e um task manager inteligente construido em Angular para demonstrar um fluxo enterprise de tarefas com revisao assistida por IA, aprovacao humana, geracao de payload, simulacao de CMS, observabilidade e chaos engineering.
 
-## Development server
+O projeto nasceu como `cms-ai-portal`, mas foi reestruturado em fases para virar uma plataforma de estudo e portfolio tecnico.
 
-To start a local development server, run:
+## Screenshots
 
-```bash
-ng serve
+As imagens abaixo sao geradas a partir do app local durante a fase final de polimento.
+
+| Home                               | Kanban                                       |
+| ---------------------------------- | -------------------------------------------- |
+| ![Home](docs/screenshots/home.png) | ![Kanban](docs/screenshots/tasks-kanban.png) |
+
+| Review                                      | Analytics                                    |
+| ------------------------------------------- | -------------------------------------------- |
+| ![Review](docs/screenshots/task-review.png) | ![Analytics](docs/screenshots/analytics.png) |
+
+## Funcionalidades
+
+- Criacao de tasks enriquecidas com prioridade, categoria, tags, responsavel, prazo e criterios de aceite.
+- Persistencia local em `localStorage`, incluindo migracao de dados legados.
+- Workflow principal: `Draft -> AI Reviewed -> Approved -> Published -> In Progress -> Completed`.
+- Revisao mockada por IA com sugestoes, score de qualidade e alertas.
+- Aplicacao ou rejeicao individual de sugestoes.
+- Aprovacao humana e geracao de payload JSON.
+- Simulacao de envio para CMS/backend com sucesso e falhas controladas.
+- Chaos Dashboard para ativar cenarios de falha de IA, CMS e rede.
+- Analytics Dashboard com metricas de status, falhas, sugestoes e tempo ate aprovacao.
+- Kanban com Angular CDK Drag and Drop e audit log de movimentacao.
+- Dark mode e light mode com preferencia persistida no navegador.
+- Cobertura de testes unitarios em 100%.
+
+## Rotas
+
+| Rota                    | Tela                             |
+| ----------------------- | -------------------------------- |
+| `/`                     | Home com resumo operacional      |
+| `/tasks`                | Board Kanban e filtros           |
+| `/tasks/new`            | Criacao de task                  |
+| `/tasks/:taskId/review` | Revisao, IA, aprovacao e payload |
+| `/chaos`                | Chaos Dashboard                  |
+| `/analytics`            | Observabilidade e auditoria      |
+
+## Arquitetura
+
+```txt
+src/app/
+  core/
+    models/
+    services/
+  features/
+    analytics-dashboard/
+    chaos-dashboard/
+    home/
+    task-create/
+    task-list/
+    task-review/
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Principais services:
 
-## Code scaffolding
+- `TaskService`: estado das tasks, migracao, persistencia, status, Kanban e audit logs.
+- `AuditLogService`: criacao padronizada de logs.
+- `AiReviewService`: simulacao de revisao por IA.
+- `TaskWorkflowService`: orquestracao do fluxo de negocio.
+- `TaskPayloadBuilderService`: criacao do payload final.
+- `CmsService`: simulacao de backend/CMS.
+- `ChaosService`: flags e logs dos cenarios de caos.
+- `AnalyticsService`: metricas consolidadas.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Modelo de workflow
 
-```bash
-ng generate component component-name
+```txt
+Draft
+  -> AI Reviewed
+  -> Approved
+  -> Published
+  -> In Progress
+  -> Completed
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Status auxiliares:
+
+- `Rejected`
+- `Error`
+
+## Comandos
+
+Instalar dependencias:
 
 ```bash
-ng generate --help
+npm install
 ```
 
-## Building
-
-To build the project run:
+Rodar em desenvolvimento:
 
 ```bash
-ng build
+npm run start
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+Validar TypeScript dos testes:
 
 ```bash
-ng test
+npx tsc -p tsconfig.spec.json --noEmit
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+Rodar testes com cobertura:
 
 ```bash
-ng e2e
+npm run test:coverage
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Gerar build:
 
-## Additional Resources
+```bash
+npm run build
+```
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Qualidade
+
+O projeto usa a configuracao de testes do Angular com Vitest e thresholds de cobertura por arquivo:
+
+- Statements: 100%
+- Branches: 100%
+- Functions: 100%
+- Lines: 100%
+
+## Roadmap executado
+
+- Fase 1: base arquitetural e modelos enterprise.
+- Fase 2: workflow principal.
+- Fase 3: IA mockada.
+- Fase 4: chaos engineering.
+- Fase 5: observabilidade.
+- Fase 6: Kanban com drag and drop.
+- Fase 7: acabamento de UX, documentacao e preparacao para portfolio.
+
+## Decisoes tecnicas
+
+- `localStorage` e a persistencia oficial nesta versao.
+- IA, CMS e chaos sao mockados para manter o projeto autocontido.
+- Angular CDK e usado apenas onde ha ganho real de interacao: Kanban drag and drop.
+- A aplicacao prioriza componentes standalone e services pequenos.
+- A UI segue uma linguagem operacional, focada em leitura rapida, status e acoes recorrentes.

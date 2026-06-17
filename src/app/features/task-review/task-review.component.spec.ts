@@ -154,6 +154,8 @@ describe('TaskReviewComponent', () => {
 
     expect(element.querySelector('h1')?.textContent).toContain('Revisao da task');
     expect(element.textContent).toContain('Publicar conteudo');
+    expect(element.textContent).toContain('Alta');
+    expect(element.textContent).toContain('Published');
     expect(element.textContent).toContain('Payload aprovado');
     expect(element.textContent).toContain('TASK_CREATED');
     expect(element.querySelector('pre')?.textContent).toContain('"source": "taskflow-ai"');
@@ -181,6 +183,10 @@ describe('TaskReviewComponent', () => {
     expect(element.textContent).toContain('88');
     expect(element.textContent).toContain('Descricao pode detalhar mais contexto e impacto.');
     expect(element.textContent).toContain('Titulo mais claro.');
+    expect(element.textContent).toContain('Titulo');
+    expect(element.textContent).toContain('Criterios de aceite');
+    expect(element.textContent).toContain('Pendente');
+    expect(element.textContent).toContain('Aplicada');
     expect(component.formatSuggestionValue(['linha um', 'linha dois'])).toBe(
       'linha um\nlinha dois',
     );
