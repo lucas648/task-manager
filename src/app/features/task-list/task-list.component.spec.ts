@@ -55,6 +55,7 @@ const LIST_TASKS: Task[] = [
 type TaskListTestApi = {
   setFilter(filter: TaskFilter): void;
   setSearch(term: string): void;
+  clearFilters(): void;
   tasksByStatus(status: TaskStatus): Task[];
   dropTask(event: { item: { data: Task }; currentIndex: number }, status: TaskStatus): void;
   changeStatus(taskId: string, status: TaskStatus): void;
@@ -135,11 +136,22 @@ describe('TaskListComponent', () => {
       'Publicar release',
     ]);
     expect(element.textContent).toContain('Produto');
+    expect(element.textContent).toContain('Media');
+    expect(element.textContent).toContain('Draft');
     expect(element.textContent).toContain('Prioridades revisadas');
     expect(element.textContent).toContain('1 logs de auditoria');
     expect(element.querySelector('article.task-card a')?.getAttribute('href')).toBe(
       '/tasks/draft/review',
     );
+    expect(
+      [...element.querySelectorAll('.screen-header a')].map((link) => ({
+        href: link.getAttribute('href'),
+        text: link.textContent?.trim(),
+      })),
+    ).toEqual([
+      { href: '/analytics', text: 'Ver analytics' },
+      { href: '/tasks/new', text: 'Inserir nova task' },
+    ]);
     expect(element.querySelectorAll('.cdk-drop-list').length).toBe(6);
     expect(element.querySelectorAll('.cdk-drag').length).toBe(3);
     expect(element.querySelector('.drag-handle')?.getAttribute('title')).toBe('Mover');
@@ -166,14 +178,40 @@ describe('TaskListComponent', () => {
     expect(cardTitles(fixture.nativeElement as HTMLElement)).toEqual(['Planejar backlog']);
   });
 
-  it('shows empty states when filters remove every task', () => {
+  it('shows a single empty state and clears filters when filters remove every task', () => {
     const fixture = TestBed.createComponent(TaskListComponent);
     const component = fixture.componentInstance as unknown as TaskListTestApi;
 
     component.setSearch('sem resultado');
     fixture.detectChanges();
 
-    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.empty-state').length).toBe(6);
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('.empty-state').length).toBe(0);
+    expect(element.querySelector('.board-empty-state')?.textContent).toContain(
+      'Nenhuma task encontrada',
+    );
+    expect(element.querySelector('.board-empty-state')?.textContent).toContain('Limpar filtros');
+
+    component.clearFilters();
+    fixture.detectChanges();
+
+    expect(cardTitles(element)).toEqual([
+      'Planejar backlog',
+      'Implementar API',
+      'Publicar release',
+    ]);
+  });
+
+  it('shows a creation path when the board has no tasks', () => {
+    tasks.set([]);
+    const fixture = TestBed.createComponent(TaskListComponent);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('.board-empty-state')?.textContent).toContain(
+      'Crie uma task para iniciar o fluxo',
+    );
+    expect(element.querySelector('.board-empty-state a')?.getAttribute('href')).toBe('/tasks/new');
   });
 
   it('delegates status changes and deletions to the task service', () => {

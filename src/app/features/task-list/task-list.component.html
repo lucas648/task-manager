@@ -5,7 +5,10 @@
       <h1>Tasks</h1>
     </div>
 
-    <a class="primary-action action-link" routerLink="/tasks/new">Inserir nova task</a>
+    <div class="home-actions" aria-label="Acoes da lista">
+      <a class="secondary-action action-link" routerLink="/analytics">Ver analytics</a>
+      <a class="primary-action action-link" routerLink="/tasks/new">Inserir nova task</a>
+    </div>
   </header>
 
   <section class="toolbar" aria-label="Filtros">
@@ -32,117 +35,139 @@
         placeholder="Titulo ou detalhe"
       />
     </label>
-  </section>
 
-  <section class="board" cdkDropListGroup aria-label="Quadro Kanban de tarefas">
-    @for (column of columns; track column.status) {
-      <section class="task-column" [class]="column.status">
-        <header class="column-header">
-          <div>
-            <p>{{ column.label }}</p>
-            <span>{{ column.caption }}</span>
-          </div>
-          <strong>{{ tasksByStatus(column.status).length }}</strong>
-        </header>
-
-        <div
-          class="task-list"
-          cdkDropList
-          [id]="column.status"
-          [cdkDropListData]="tasksByStatus(column.status)"
-          (cdkDropListDropped)="dropTask($event, column.status)"
-        >
-          @for (task of tasksByStatus(column.status); track task.id) {
-            <article
-              class="task-card"
-              cdkDrag
-              [cdkDragData]="task"
-              [class.is-done]="task.status === 'completed'"
-            >
-              <div class="task-card-header">
-                <button
-                  type="button"
-                  class="drag-handle"
-                  cdkDragHandle
-                  [attr.aria-label]="'Mover ' + task.title"
-                  title="Mover"
-                >
-                  <span aria-hidden="true">::</span>
-                </button>
-                <h2>{{ task.title }}</h2>
-                <button
-                  type="button"
-                  class="icon-button"
-                  (click)="deleteTask(task.id)"
-                  [attr.aria-label]="'Remover ' + task.title"
-                  title="Remover"
-                >
-                  x
-                </button>
-              </div>
-
-              @if (task.description) {
-                <p class="task-description">{{ task.description }}</p>
-              }
-
-              <div class="task-tags" aria-label="Metadados da task">
-                <span>{{ task.priority }}</span>
-                <span>{{ task.category }}</span>
-                @if (task.assignee) {
-                  <span>{{ task.assignee }}</span>
-                }
-                @if (task.dueDate) {
-                  <span>{{ task.dueDate | date: 'dd/MM/yyyy' }}</span>
-                }
-              </div>
-
-              @if (task.tags.length) {
-                <div class="task-tags" aria-label="Tags">
-                  @for (tag of task.tags; track tag) {
-                    <span>{{ tag }}</span>
-                  }
-                </div>
-              }
-
-              @if (task.acceptanceCriteria.length) {
-                <ul class="criteria-list">
-                  @for (criterion of task.acceptanceCriteria; track criterion) {
-                    <li>{{ criterion }}</li>
-                  }
-                </ul>
-              }
-
-              <div class="task-meta">
-                <span>Criada {{ task.createdAt | date: 'dd/MM HH:mm' }}</span>
-                <span>Atualizada {{ task.updatedAt | date: 'dd/MM HH:mm' }}</span>
-                <span>{{ task.auditLogs.length }} logs de auditoria</span>
-              </div>
-
-              <label class="status-select">
-                <span>Status</span>
-                <select
-                  [ngModel]="task.status"
-                  [ngModelOptions]="{ standalone: true }"
-                  (ngModelChange)="changeStatus(task.id, $event)"
-                >
-                  @for (option of statusOptions; track option.value) {
-                    <option [value]="option.value">{{ option.label }}</option>
-                  }
-                </select>
-              </label>
-
-              <a
-                class="secondary-action task-card-action"
-                [routerLink]="['/tasks', task.id, 'review']"
-              >
-                Abrir fluxo
-              </a>
-            </article>
-          } @empty {
-            <p class="empty-state">Sem tasks</p>
-          }
-        </div>
-      </section>
+    @if (hasActiveFilters()) {
+      <button type="button" class="secondary-action toolbar-action" (click)="clearFilters()">
+        Limpar filtros
+      </button>
     }
   </section>
+
+  @if (hasFilteredTasks()) {
+    <section class="board" cdkDropListGroup aria-label="Quadro Kanban de tarefas">
+      @for (column of columns; track column.status) {
+        <section class="task-column" [class]="column.status">
+          <header class="column-header">
+            <div>
+              <p>{{ column.label }}</p>
+              <span>{{ column.caption }}</span>
+            </div>
+            <strong>{{ tasksByStatus(column.status).length }}</strong>
+          </header>
+
+          <div
+            class="task-list"
+            cdkDropList
+            [id]="column.status"
+            [cdkDropListData]="tasksByStatus(column.status)"
+            (cdkDropListDropped)="dropTask($event, column.status)"
+          >
+            @for (task of tasksByStatus(column.status); track task.id) {
+              <article
+                class="task-card"
+                cdkDrag
+                [cdkDragData]="task"
+                [class.is-done]="task.status === 'completed'"
+              >
+                <div class="task-card-header">
+                  <button
+                    type="button"
+                    class="drag-handle"
+                    cdkDragHandle
+                    [attr.aria-label]="'Mover ' + task.title"
+                    title="Mover"
+                  >
+                    <span aria-hidden="true">::</span>
+                  </button>
+                  <h2>{{ task.title }}</h2>
+                  <button
+                    type="button"
+                    class="icon-button"
+                    (click)="deleteTask(task.id)"
+                    [attr.aria-label]="'Remover ' + task.title"
+                    title="Remover"
+                  >
+                    x
+                  </button>
+                </div>
+
+                @if (task.description) {
+                  <p class="task-description">{{ task.description }}</p>
+                }
+
+                <div class="task-tags" aria-label="Metadados da task">
+                  <span>{{ priorityLabels[task.priority] }}</span>
+                  <span>{{ statusLabels[task.status] }}</span>
+                  <span>{{ task.category }}</span>
+                  @if (task.assignee) {
+                    <span>{{ task.assignee }}</span>
+                  }
+                  @if (task.dueDate) {
+                    <span>{{ task.dueDate | date: 'dd/MM/yyyy' }}</span>
+                  }
+                </div>
+
+                @if (task.tags.length) {
+                  <div class="task-tags" aria-label="Tags">
+                    @for (tag of task.tags; track tag) {
+                      <span>{{ tag }}</span>
+                    }
+                  </div>
+                }
+
+                @if (task.acceptanceCriteria.length) {
+                  <ul class="criteria-list">
+                    @for (criterion of task.acceptanceCriteria; track criterion) {
+                      <li>{{ criterion }}</li>
+                    }
+                  </ul>
+                }
+
+                <div class="task-meta">
+                  <span>Criada {{ task.createdAt | date: 'dd/MM HH:mm' }}</span>
+                  <span>Atualizada {{ task.updatedAt | date: 'dd/MM HH:mm' }}</span>
+                  <span>{{ task.auditLogs.length }} logs de auditoria</span>
+                </div>
+
+                <label class="status-select">
+                  <span>Status</span>
+                  <select
+                    [ngModel]="task.status"
+                    [ngModelOptions]="{ standalone: true }"
+                    (ngModelChange)="changeStatus(task.id, $event)"
+                  >
+                    @for (option of statusOptions; track option.value) {
+                      <option [value]="option.value">{{ option.label }}</option>
+                    }
+                  </select>
+                </label>
+
+                <a
+                  class="secondary-action task-card-action"
+                  [routerLink]="['/tasks', task.id, 'review']"
+                >
+                  Abrir fluxo
+                </a>
+              </article>
+            } @empty {
+              <p class="empty-state">Sem tasks</p>
+            }
+          </div>
+        </section>
+      }
+    </section>
+  } @else {
+    <section class="workflow-panel board-empty-state" aria-label="Lista vazia">
+      <h2>Nenhuma task encontrada</h2>
+      @if (hasActiveFilters()) {
+        <p>Ajuste a busca ou limpe os filtros para voltar ao board completo.</p>
+        <button type="button" class="secondary-action" (click)="clearFilters()">
+          Limpar filtros
+        </button>
+      } @else {
+        <p>Crie uma task para iniciar o fluxo de revisao, aprovacao e publicacao.</p>
+        <a class="primary-action action-link" routerLink="/tasks/new">Inserir nova task</a>
+      }
+    </section>
+  }
 </main>

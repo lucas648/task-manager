@@ -52,6 +52,7 @@ a {
 
 .site-nav nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 4px;
   border: 1px solid #d2dbe7;
@@ -315,9 +316,13 @@ textarea:focus {
   width: min(560px, 100%);
 }
 
+.toolbar-action {
+  width: fit-content;
+}
+
 .board {
   display: grid;
-  grid-template-columns: repeat(6, minmax(190px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -562,6 +567,23 @@ textarea:focus {
   border-radius: 8px;
   color: #637187;
   font-weight: 800;
+}
+
+.board-empty-state {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin-top: 0;
+}
+
+.board-empty-state h2,
+.board-empty-state p {
+  margin: 0;
+}
+
+.board-empty-state p {
+  color: #44546a;
+  line-height: 1.5;
 }
 
 .status-overview {

@@ -5,7 +5,9 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
   FILTER_OPTIONS,
+  PRIORITY_LABELS,
   STATUS_OPTIONS,
+  STATUS_LABELS,
   TASK_COLUMNS,
   Task,
   TaskFilter,
@@ -21,6 +23,8 @@ import { TaskService } from '../../core/services/task.service';
 export class TaskListComponent {
   protected readonly taskService = inject(TaskService);
   protected readonly statusOptions = STATUS_OPTIONS;
+  protected readonly statusLabels = STATUS_LABELS;
+  protected readonly priorityLabels = PRIORITY_LABELS;
   protected readonly filterOptions = FILTER_OPTIONS;
   protected readonly columns = TASK_COLUMNS;
   protected readonly filter = signal<TaskFilter>('all');
@@ -39,6 +43,10 @@ export class TaskListComponent {
       return matchesStatus && matchesSearch;
     });
   });
+  protected readonly hasActiveFilters = computed(
+    () => this.filter() !== 'all' || !!this.searchTerm().trim(),
+  );
+  protected readonly hasFilteredTasks = computed(() => this.filteredTasks().length > 0);
 
   protected setFilter(filter: TaskFilter): void {
     this.filter.set(filter);
@@ -46,6 +54,11 @@ export class TaskListComponent {
 
   protected setSearch(term: string): void {
     this.searchTerm.set(term);
+  }
+
+  protected clearFilters(): void {
+    this.filter.set('all');
+    this.searchTerm.set('');
   }
 
   protected tasksByStatus(status: TaskStatus): Task[] {

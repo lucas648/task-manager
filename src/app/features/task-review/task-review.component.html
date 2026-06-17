@@ -11,12 +11,12 @@
   @if (task(); as task) {
     <section class="workflow-layout" aria-label="Fluxo da task">
       <article class="workflow-panel task-review-details">
-        <p class="eyebrow">{{ task.status }}</p>
+        <p class="eyebrow">{{ statusLabels[task.status] }}</p>
         <h2>{{ task.title }}</h2>
         <p>{{ task.description }}</p>
 
         <div class="task-tags" aria-label="Metadados da task">
-          <span>{{ task.priority }}</span>
+          <span>{{ priorityLabels[task.priority] }}</span>
           <span>{{ task.category }}</span>
           @if (task.assignee) {
             <span>{{ task.assignee }}</span>
@@ -119,8 +119,8 @@
             @for (suggestion of task.aiSuggestions; track suggestion.id) {
               <article class="suggestion-card" [class]="'decision-' + suggestion.decision">
                 <header>
-                  <span>{{ suggestion.field }}</span>
-                  <strong>{{ suggestion.decision }}</strong>
+                  <span>{{ suggestionFieldLabels[suggestion.field] }}</span>
+                  <strong>{{ suggestionDecisionLabels[suggestion.decision] }}</strong>
                 </header>
 
                 <p>{{ suggestion.reason }}</p>

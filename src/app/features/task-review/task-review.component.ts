@@ -1,7 +1,13 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { AiSuggestion, TASK_COLUMNS, TaskStatus } from '../../core/models/task.model';
+import {
+  AiSuggestion,
+  PRIORITY_LABELS,
+  STATUS_LABELS,
+  TASK_COLUMNS,
+  TaskStatus,
+} from '../../core/models/task.model';
 import { TaskService } from '../../core/services/task.service';
 import { TaskWorkflowService } from '../../core/services/task-workflow.service';
 
@@ -16,6 +22,18 @@ export class TaskReviewComponent {
   private readonly workflowService = inject(TaskWorkflowService);
 
   protected readonly TaskStatus = TaskStatus;
+  protected readonly statusLabels = STATUS_LABELS;
+  protected readonly priorityLabels = PRIORITY_LABELS;
+  protected readonly suggestionFieldLabels: Record<AiSuggestion['field'], string> = {
+    title: 'Titulo',
+    description: 'Descricao',
+    acceptanceCriteria: 'Criterios de aceite',
+  };
+  protected readonly suggestionDecisionLabels: Record<AiSuggestion['decision'], string> = {
+    pending: 'Pendente',
+    applied: 'Aplicada',
+    rejected: 'Rejeitada',
+  };
   protected readonly workflowSteps = TASK_COLUMNS;
   protected readonly message = signal('');
   protected readonly taskId = this.route.snapshot.paramMap.get('taskId') ?? '';
