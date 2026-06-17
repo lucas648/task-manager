@@ -41,6 +41,7 @@ describe('task model constants', () => {
       'TASK_CREATED',
       'TASK_UPDATED',
       'STATUS_CHANGED',
+      'TASK_MOVED',
       'AI_REVIEW_STARTED',
       'AI_REVIEW_SUCCESS',
       'AI_REVIEW_ERROR',

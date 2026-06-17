@@ -20,6 +20,7 @@ export enum AuditLogEvent {
   TaskCreated = 'TASK_CREATED',
   TaskUpdated = 'TASK_UPDATED',
   StatusChanged = 'STATUS_CHANGED',
+  TaskMoved = 'TASK_MOVED',
   AiReviewStarted = 'AI_REVIEW_STARTED',
   AiReviewSuccess = 'AI_REVIEW_SUCCESS',
   AiReviewError = 'AI_REVIEW_ERROR',
