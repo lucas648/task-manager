@@ -1,3 +1,4 @@
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -14,7 +15,7 @@ import { TaskService } from '../../core/services/task.service';
 
 @Component({
   selector: 'app-task-list',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, DragDropModule, FormsModule, RouterLink],
   templateUrl: './task-list.component.html',
 })
 export class TaskListComponent {
@@ -49,6 +50,10 @@ export class TaskListComponent {
 
   protected tasksByStatus(status: TaskStatus): Task[] {
     return this.filteredTasks().filter((task) => task.status === status);
+  }
+
+  protected dropTask(event: CdkDragDrop<Task[], Task[], Task>, status: TaskStatus): void {
+    this.taskService.moveTask(event.item.data.id, status, event.currentIndex);
   }
 
   protected changeStatus(taskId: string, status: TaskStatus): void {

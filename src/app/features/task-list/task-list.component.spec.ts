@@ -56,6 +56,7 @@ type TaskListTestApi = {
   setFilter(filter: TaskFilter): void;
   setSearch(term: string): void;
   tasksByStatus(status: TaskStatus): Task[];
+  dropTask(event: { item: { data: Task }; currentIndex: number }, status: TaskStatus): void;
   changeStatus(taskId: string, status: TaskStatus): void;
   deleteTask(taskId: string): void;
 };
@@ -75,6 +76,23 @@ describe('TaskListComponent', () => {
         currentTasks.map((task) => (task.id === taskId ? { ...task, status } : task)),
       );
     }),
+    moveTask: vi.fn((taskId: string, status: TaskStatus, targetIndex: number) => {
+      const taskToMove = tasks().find((task) => task.id === taskId);
+
+      if (!taskToMove) {
+        return;
+      }
+
+      const remainingTasks = tasks().filter((task) => task.id !== taskId);
+      const targetTasks = remainingTasks.filter((task) => task.status === status);
+      const targetTask = targetTasks[targetIndex];
+      const insertionIndex = targetTask
+        ? remainingTasks.findIndex((task) => task.id === targetTask.id)
+        : remainingTasks.length;
+
+      remainingTasks.splice(insertionIndex, 0, { ...taskToMove, status });
+      tasks.set(remainingTasks);
+    }),
     deleteTask: vi.fn((taskId: string) => {
       tasks.update((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
     }),
@@ -83,6 +101,7 @@ describe('TaskListComponent', () => {
   beforeEach(async () => {
     tasks.set([...LIST_TASKS]);
     taskService.changeStatus.mockClear();
+    taskService.moveTask.mockClear();
     taskService.deleteTask.mockClear();
 
     await TestBed.configureTestingModule({
@@ -121,6 +140,9 @@ describe('TaskListComponent', () => {
     expect(element.querySelector('article.task-card a')?.getAttribute('href')).toBe(
       '/tasks/draft/review',
     );
+    expect(element.querySelectorAll('.cdk-drop-list').length).toBe(6);
+    expect(element.querySelectorAll('.cdk-drag').length).toBe(3);
+    expect(element.querySelector('.drag-handle')?.getAttribute('title')).toBe('Mover');
   });
 
   it('filters tasks by status and search text across enriched fields', () => {
@@ -168,5 +190,29 @@ describe('TaskListComponent', () => {
       'Planejar backlog',
       'Publicar release',
     ]);
+  });
+
+  it('delegates kanban drops to the task service', () => {
+    const fixture = TestBed.createComponent(TaskListComponent);
+    const component = fixture.componentInstance as unknown as TaskListTestApi;
+
+    component.dropTask(
+      {
+        item: {
+          data: LIST_TASKS[0],
+        },
+        currentIndex: 0,
+      },
+      TaskStatus.Approved,
+    );
+    fixture.detectChanges();
+
+    expect(taskService.moveTask).toHaveBeenCalledWith('draft', TaskStatus.Approved, 0);
+    expect(cardTitles(fixture.nativeElement as HTMLElement)).toEqual([
+      'Planejar backlog',
+      'Implementar API',
+      'Publicar release',
+    ]);
+    expect(component.tasksByStatus(TaskStatus.Approved).map((task) => task.id)).toEqual(['draft']);
   });
 });

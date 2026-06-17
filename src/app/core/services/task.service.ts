@@ -123,6 +123,45 @@ export class TaskService {
     );
   }
 
+  moveTask(taskId: string, targetStatus: TaskStatus, targetIndex: number): void {
+    const now = new Date().toISOString();
+
+    this.tasks.update((tasks) => {
+      const sourceTaskIndex = tasks.findIndex((task) => task.id === taskId);
+
+      if (sourceTaskIndex < 0) {
+        return tasks;
+      }
+
+      const sourceTask = tasks[sourceTaskIndex];
+      const sourceStatus = sourceTask.status;
+      const sourceColumnIndex = this.findStatusIndex(tasks, taskId, sourceStatus);
+      const remainingTasks = tasks.filter((task) => task.id !== taskId);
+      const targetColumnSize = remainingTasks.filter((task) => task.status === targetStatus).length;
+      const targetColumnIndex = Math.min(Math.max(targetIndex, 0), targetColumnSize);
+
+      if (sourceStatus === targetStatus && sourceColumnIndex === targetColumnIndex) {
+        return tasks;
+      }
+
+      const movedTask = this.buildMovedTask(
+        sourceTask,
+        sourceStatus,
+        targetStatus,
+        sourceColumnIndex,
+        targetColumnIndex,
+        now,
+      );
+
+      return this.insertTaskAtStatusIndex(
+        remainingTasks,
+        movedTask,
+        targetStatus,
+        targetColumnIndex,
+      );
+    });
+  }
+
   deleteTask(taskId: string): void {
     this.tasks.update((tasks) => tasks.filter((task) => task.id !== taskId));
   }
@@ -179,6 +218,85 @@ export class TaskService {
         ? { acceptanceCriteria: input.acceptanceCriteria }
         : {}),
     };
+  }
+
+  private buildMovedTask(
+    task: Task,
+    sourceStatus: TaskStatus,
+    targetStatus: TaskStatus,
+    sourceColumnIndex: number,
+    targetColumnIndex: number,
+    timestamp: string,
+  ): Task {
+    const updatedTask: Task = {
+      ...task,
+      status: targetStatus,
+      updatedAt: timestamp,
+      approvedAt: targetStatus === TaskStatus.Approved ? timestamp : task.approvedAt,
+      publishedAt: targetStatus === TaskStatus.Published ? timestamp : task.publishedAt,
+    };
+    const statusEvents =
+      sourceStatus === targetStatus
+        ? []
+        : [
+            {
+              event: AuditLogEvent.StatusChanged,
+              metadata: {
+                fromStatus: sourceStatus,
+                toStatus: targetStatus,
+              },
+            },
+          ];
+
+    return [
+      ...statusEvents,
+      {
+        event: AuditLogEvent.TaskMoved,
+        metadata: {
+          fromStatus: sourceStatus,
+          toStatus: targetStatus,
+          fromColumnIndex: sourceColumnIndex,
+          toColumnIndex: targetColumnIndex,
+        },
+      },
+    ].reduce(
+      (movedTask, auditEvent) =>
+        this.withAuditLog(movedTask, auditEvent.event, auditEvent.metadata, timestamp),
+      updatedTask,
+    );
+  }
+
+  private insertTaskAtStatusIndex(
+    tasks: Task[],
+    task: Task,
+    status: TaskStatus,
+    targetIndex: number,
+  ): Task[] {
+    const targetTask = tasks.filter((candidate) => candidate.status === status)[targetIndex];
+    const insertionIndex = targetTask
+      ? tasks.findIndex((candidate) => candidate.id === targetTask.id)
+      : this.findIndexAfterLastStatus(tasks, status);
+    const updatedTasks = [...tasks];
+
+    updatedTasks.splice(insertionIndex, 0, task);
+
+    return updatedTasks;
+  }
+
+  private findStatusIndex(tasks: Task[], taskId: string, status: TaskStatus): number {
+    return tasks.filter((task) => task.status === status).findIndex((task) => task.id === taskId);
+  }
+
+  private findIndexAfterLastStatus(tasks: Task[], status: TaskStatus): number {
+    let lastStatusIndex = -1;
+
+    tasks.forEach((task, index) => {
+      if (task.status === status) {
+        lastStatusIndex = index;
+      }
+    });
+
+    return lastStatusIndex >= 0 ? lastStatusIndex + 1 : tasks.length;
   }
 
   private withAuditLog(

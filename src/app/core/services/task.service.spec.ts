@@ -468,6 +468,203 @@ describe('TaskService', () => {
     expect(service.tasks().map((task) => task.id)).toEqual(['one']);
   });
 
+  it('moves tasks on the kanban board, updates status timestamps, and records movement logs', () => {
+    setupStorage(
+      JSON.stringify([
+        {
+          id: 'one',
+          title: 'Primeira',
+          description: 'Detalhe um',
+          status: TaskStatus.Draft,
+        },
+        {
+          id: 'two',
+          title: 'Segunda',
+          description: 'Detalhe dois',
+          status: TaskStatus.Completed,
+        },
+        {
+          id: 'three',
+          title: 'Terceira',
+          description: 'Detalhe tres',
+          status: TaskStatus.InProgress,
+        },
+        {
+          id: 'four',
+          title: 'Quarta',
+          description: 'Detalhe quatro',
+          status: TaskStatus.Draft,
+        },
+      ]),
+    );
+    setupCrypto(
+      'one-status-log',
+      'one-moved-log',
+      'two-moved-log',
+      'three-status-log',
+      'three-moved-log',
+      'four-status-log',
+      'four-moved-log',
+    );
+
+    const service = setupService();
+
+    service.moveTask('one', TaskStatus.Completed, 0);
+    expect(service.tasks().map((task) => task.id)).toEqual(['one', 'two', 'three', 'four']);
+    expect(service.tasks()[0]).toMatchObject({
+      id: 'one',
+      status: TaskStatus.Completed,
+      updatedAt: TEST_NOW,
+      auditLogs: [
+        {
+          id: 'one-status-log',
+          event: AuditLogEvent.StatusChanged,
+          taskId: 'one',
+          timestamp: TEST_NOW,
+          metadata: {
+            fromStatus: TaskStatus.Draft,
+            toStatus: TaskStatus.Completed,
+          },
+        },
+        {
+          id: 'one-moved-log',
+          event: AuditLogEvent.TaskMoved,
+          taskId: 'one',
+          timestamp: TEST_NOW,
+          metadata: {
+            fromStatus: TaskStatus.Draft,
+            toStatus: TaskStatus.Completed,
+            fromColumnIndex: 0,
+            toColumnIndex: 0,
+          },
+        },
+      ],
+    });
+
+    service.moveTask('two', TaskStatus.Completed, 0);
+    expect(service.tasks().map((task) => task.id)).toEqual(['two', 'one', 'three', 'four']);
+    expect(service.findTask('two')?.auditLogs).toEqual([
+      {
+        id: 'two-moved-log',
+        event: AuditLogEvent.TaskMoved,
+        taskId: 'two',
+        timestamp: TEST_NOW,
+        metadata: {
+          fromStatus: TaskStatus.Completed,
+          toStatus: TaskStatus.Completed,
+          fromColumnIndex: 1,
+          toColumnIndex: 0,
+        },
+      },
+    ]);
+
+    service.moveTask('three', TaskStatus.Approved, 10);
+    expect(service.findTask('three')).toMatchObject({
+      status: TaskStatus.Approved,
+      approvedAt: TEST_NOW,
+      publishedAt: undefined,
+    });
+    expect(service.findTask('three')?.auditLogs.map((log) => log.id)).toEqual([
+      'three-status-log',
+      'three-moved-log',
+    ]);
+
+    service.moveTask('four', TaskStatus.Published, 10);
+    expect(service.tasks().map((task) => task.id)).toEqual(['two', 'one', 'three', 'four']);
+    expect(service.findTask('four')).toMatchObject({
+      status: TaskStatus.Published,
+      approvedAt: undefined,
+      publishedAt: TEST_NOW,
+    });
+    expect(service.findTask('four')?.auditLogs.at(-1)).toMatchObject({
+      event: AuditLogEvent.TaskMoved,
+      metadata: {
+        fromStatus: TaskStatus.Draft,
+        toStatus: TaskStatus.Published,
+        fromColumnIndex: 0,
+        toColumnIndex: 0,
+      },
+    });
+  });
+
+  it('ignores missing kanban tasks and same-position moves', () => {
+    setupStorage(
+      JSON.stringify([
+        {
+          id: 'one',
+          title: 'Primeira',
+          description: 'Detalhe um',
+          status: TaskStatus.Draft,
+        },
+      ]),
+    );
+
+    const service = setupService();
+
+    service.moveTask('missing', TaskStatus.Draft, 0);
+    service.moveTask('one', TaskStatus.Draft, 0);
+
+    expect(service.tasks()).toEqual([
+      {
+        id: 'one',
+        title: 'Primeira',
+        description: 'Detalhe um',
+        priority: TaskPriority.Medium,
+        status: TaskStatus.Draft,
+        category: 'Geral',
+        tags: [],
+        assignee: undefined,
+        dueDate: undefined,
+        acceptanceCriteria: [],
+        createdAt: TEST_NOW,
+        updatedAt: TEST_NOW,
+        approvedAt: undefined,
+        publishedAt: undefined,
+        aiSuggestions: [],
+        qualityScore: undefined,
+        cmsPayload: undefined,
+        cmsError: undefined,
+        auditLogs: [],
+      },
+    ]);
+  });
+
+  it('appends moved tasks after the last task in an occupied kanban column', () => {
+    setupStorage(
+      JSON.stringify([
+        {
+          id: 'one',
+          title: 'Primeira',
+          description: 'Detalhe um',
+          status: TaskStatus.Draft,
+        },
+        {
+          id: 'two',
+          title: 'Segunda',
+          description: 'Detalhe dois',
+          status: TaskStatus.Completed,
+        },
+      ]),
+    );
+    setupCrypto('status-log', 'move-log');
+
+    const service = setupService();
+
+    service.moveTask('one', TaskStatus.Completed, 99);
+
+    expect(service.tasks().map((task) => task.id)).toEqual(['two', 'one']);
+    expect(service.findTask('one')?.auditLogs.at(-1)).toMatchObject({
+      id: 'move-log',
+      event: AuditLogEvent.TaskMoved,
+      metadata: {
+        fromStatus: TaskStatus.Draft,
+        toStatus: TaskStatus.Completed,
+        fromColumnIndex: 0,
+        toColumnIndex: 1,
+      },
+    });
+  });
+
   it('falls back to starter tasks for invalid stored data', () => {
     setupStorage(JSON.stringify({ id: 'not-an-array' }));
     expect(setupService().tasks()).toEqual(STARTER_TASKS);

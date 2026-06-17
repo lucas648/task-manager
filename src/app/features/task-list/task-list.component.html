@@ -34,7 +34,7 @@
     </label>
   </section>
 
-  <section class="board" aria-label="Quadro de tarefas">
+  <section class="board" cdkDropListGroup aria-label="Quadro Kanban de tarefas">
     @for (column of columns; track column.status) {
       <section class="task-column" [class]="column.status">
         <header class="column-header">
@@ -45,10 +45,30 @@
           <strong>{{ tasksByStatus(column.status).length }}</strong>
         </header>
 
-        <div class="task-list">
+        <div
+          class="task-list"
+          cdkDropList
+          [id]="column.status"
+          [cdkDropListData]="tasksByStatus(column.status)"
+          (cdkDropListDropped)="dropTask($event, column.status)"
+        >
           @for (task of tasksByStatus(column.status); track task.id) {
-            <article class="task-card" [class.is-done]="task.status === 'completed'">
+            <article
+              class="task-card"
+              cdkDrag
+              [cdkDragData]="task"
+              [class.is-done]="task.status === 'completed'"
+            >
               <div class="task-card-header">
+                <button
+                  type="button"
+                  class="drag-handle"
+                  cdkDragHandle
+                  [attr.aria-label]="'Mover ' + task.title"
+                  title="Mover"
+                >
+                  <span aria-hidden="true">::</span>
+                </button>
                 <h2>{{ task.title }}</h2>
                 <button
                   type="button"
