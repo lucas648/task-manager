@@ -51,6 +51,12 @@ export enum BoardRecommendationSeverity {
   Critical = 'critical',
 }
 
+export enum AgentId {
+  InitialTaskAnalysis = 'initial_task_analysis_agent',
+  BoardAdvisor = 'board_advisor_agent',
+}
+
+export type AgentProviderKind = 'mock' | 'openai';
 export type TaskFilter = 'all' | TaskStatus;
 export type SuggestionDecision = 'pending' | 'applied' | 'rejected';
 export type ChaosScenarioId =
@@ -102,6 +108,7 @@ export interface AiReviewResult {
   summary: string;
   suggestions: AiSuggestion[];
   qualityScore: TaskQualityScore;
+  agentRun?: AgentRunMetadata;
 }
 
 export interface CmsSendResult {
@@ -248,6 +255,49 @@ export interface BoardRecommendationSummary {
   infoCount: number;
   warningCount: number;
   criticalCount: number;
+  agentRun?: AgentRunMetadata;
+}
+
+export interface AgentPromptContract {
+  agentId: AgentId;
+  version: string;
+  provider: AgentProviderKind;
+  purpose: string;
+  inputSchema: string;
+  outputSchema: string;
+}
+
+export interface AgentRunMetadata {
+  agentId: AgentId;
+  contractVersion: string;
+  provider: AgentProviderKind;
+  generatedAt: string;
+}
+
+export interface TaskAnalysisRequest {
+  task: Task;
+  requestedAt: string;
+  contractVersion: string;
+  context: {
+    includeSlowAiWarning: boolean;
+  };
+}
+
+export interface BoardRecommendationRequest {
+  tasks: Task[];
+  boardTime: BoardTimeSummary;
+  requestedAt: string;
+  contractVersion: string;
+}
+
+export interface TaskAnalysisProvider {
+  readonly contract: AgentPromptContract;
+  analyze(request: TaskAnalysisRequest): AiReviewResult;
+}
+
+export interface BoardRecommendationProvider {
+  readonly contract: AgentPromptContract;
+  recommend(request: BoardRecommendationRequest): BoardRecommendationSummary;
 }
 
 export interface AnalyticsSummary {
@@ -307,6 +357,27 @@ export const PRIORITY_OPTIONS: PriorityOption[] = Object.values(TaskPriority).ma
 }));
 
 export const FILTER_OPTIONS: FilterOption[] = [{ value: 'all', label: 'Todas' }, ...STATUS_OPTIONS];
+
+export const AGENT_CONTRACT_VERSION = 'taskflow-agent-v1';
+
+export const AGENT_PROMPT_CONTRACTS: Record<AgentId, AgentPromptContract> = {
+  [AgentId.InitialTaskAnalysis]: {
+    agentId: AgentId.InitialTaskAnalysis,
+    version: AGENT_CONTRACT_VERSION,
+    provider: 'mock',
+    purpose: 'Analisar uma task recem-criada e sugerir melhorias estruturadas.',
+    inputSchema: 'TaskAnalysisRequest',
+    outputSchema: 'AiReviewResult',
+  },
+  [AgentId.BoardAdvisor]: {
+    agentId: AgentId.BoardAdvisor,
+    version: AGENT_CONTRACT_VERSION,
+    provider: 'mock',
+    purpose: 'Ler tasks e metricas do board para sugerir proximas acoes operacionais.',
+    inputSchema: 'BoardRecommendationRequest',
+    outputSchema: 'BoardRecommendationSummary',
+  },
+};
 
 export const BOARD_STATUS_THRESHOLDS_MINUTES: Partial<Record<TaskStatus, number>> = {
   [TaskStatus.Draft]: 1440,
