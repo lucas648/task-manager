@@ -48,6 +48,7 @@ export class TaskWorkflowService {
           {
             event: AuditLogEvent.AiReviewSuccess,
             metadata: {
+              agentRun: review.agentRun,
               score: review.qualityScore.score,
               suggestions: review.suggestions.length,
               summary: review.summary,

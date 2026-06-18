@@ -1,4 +1,7 @@
 import {
+  AGENT_CONTRACT_VERSION,
+  AGENT_PROMPT_CONTRACTS,
+  AgentId,
   AuditLogEvent,
   BOARD_STATUS_THRESHOLDS_MINUTES,
   BoardRecommendationSeverity,
@@ -78,6 +81,29 @@ describe('task model constants', () => {
       'add_acceptance_criteria',
     ]);
     expect(Object.values(BoardRecommendationSeverity)).toEqual(['info', 'warning', 'critical']);
+  });
+
+  it('defines versioned agent contracts for future provider swaps', () => {
+    expect(Object.values(AgentId)).toEqual(['initial_task_analysis_agent', 'board_advisor_agent']);
+    expect(AGENT_CONTRACT_VERSION).toBe('taskflow-agent-v1');
+    expect(AGENT_PROMPT_CONTRACTS).toEqual({
+      [AgentId.InitialTaskAnalysis]: {
+        agentId: AgentId.InitialTaskAnalysis,
+        version: AGENT_CONTRACT_VERSION,
+        provider: 'mock',
+        purpose: 'Analisar uma task recem-criada e sugerir melhorias estruturadas.',
+        inputSchema: 'TaskAnalysisRequest',
+        outputSchema: 'AiReviewResult',
+      },
+      [AgentId.BoardAdvisor]: {
+        agentId: AgentId.BoardAdvisor,
+        version: AGENT_CONTRACT_VERSION,
+        provider: 'mock',
+        purpose: 'Ler tasks e metricas do board para sugerir proximas acoes operacionais.',
+        inputSchema: 'BoardRecommendationRequest',
+        outputSchema: 'BoardRecommendationSummary',
+      },
+    });
   });
 
   it('defines the phase 4 chaos scenarios', () => {
