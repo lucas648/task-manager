@@ -145,6 +145,11 @@ describe('TaskListComponent', () => {
     expect(element.textContent).toContain('Na baia ha 1 d');
     expect(element.textContent).toContain('Acima do limite da baia');
     expect(element.querySelectorAll('.task-card.is-over-threshold').length).toBe(1);
+    expect(element.textContent).toContain('Sugestoes da IA');
+    expect(element.textContent).toContain('Revisar task com IA');
+    expect(element.textContent).toContain('Definir responsavel');
+    expect(element.textContent).toContain('Adicionar criterios de aceite');
+    expect(element.querySelectorAll('.task-recommendation').length).toBe(3);
     expect(element.textContent).toContain('1 logs de auditoria');
     expect(element.querySelector('article.task-card a')?.getAttribute('href')).toBe(
       '/tasks/draft/review',

@@ -7,6 +7,7 @@ import {
   Task,
   TaskStatus,
 } from '../models/task.model';
+import { AiRecommendationService } from './ai-recommendation.service';
 import { BoardAnalyticsService } from './board-analytics.service';
 import { ChaosService } from './chaos.service';
 import { TaskService } from './task.service';
@@ -18,6 +19,7 @@ export class AnalyticsService {
   private readonly taskService = inject(TaskService);
   private readonly chaosService = inject(ChaosService);
   private readonly boardAnalyticsService = inject(BoardAnalyticsService);
+  private readonly aiRecommendationService = inject(AiRecommendationService);
 
   readonly summary = computed<AnalyticsSummary>(() => {
     const tasks = this.taskService.tasks();
@@ -28,6 +30,7 @@ export class AnalyticsService {
     const acceptedSuggestions = this.countSuggestionsByDecision(tasks, 'applied');
     const rejectedSuggestions = this.countSuggestionsByDecision(tasks, 'rejected');
     const decidedSuggestions = acceptedSuggestions + rejectedSuggestions;
+    const boardTime = this.boardAnalyticsService.summarize(tasks);
 
     return {
       totalTasks,
@@ -49,7 +52,8 @@ export class AnalyticsService {
           percentage: this.calculatePercentage(count, totalTasks),
         };
       }),
-      boardTime: this.boardAnalyticsService.summarize(tasks),
+      boardTime,
+      boardRecommendations: this.aiRecommendationService.recommend(tasks, boardTime),
       recentEvents: this.sortRecentEvents(allLogs).slice(0, RECENT_EVENTS_LIMIT),
     };
   });

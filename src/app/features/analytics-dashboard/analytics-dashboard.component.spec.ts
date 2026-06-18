@@ -1,7 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AnalyticsSummary, AuditLogEvent, TaskStatus } from '../../core/models/task.model';
+import {
+  AnalyticsSummary,
+  AuditLogEvent,
+  BoardRecommendationSeverity,
+  BoardRecommendationType,
+  TaskStatus,
+} from '../../core/models/task.model';
 import { AnalyticsService } from '../../core/services/analytics.service';
 import { AnalyticsDashboardComponent } from './analytics-dashboard.component';
 
@@ -44,6 +50,40 @@ const ANALYTICS_SUMMARY: AnalyticsSummary = {
         longestMinutes: 0,
         longestLabel: '0 min',
         overThresholdCount: 0,
+      },
+    ],
+  },
+  boardRecommendations: {
+    generatedAt: '2026-06-06T14:00:00.000Z',
+    total: 2,
+    infoCount: 0,
+    warningCount: 1,
+    criticalCount: 1,
+    recommendations: [
+      {
+        id: 'task-review_task',
+        taskId: 'task-id',
+        taskTitle: 'Planejar backlog',
+        type: BoardRecommendationType.ReviewTask,
+        severity: BoardRecommendationSeverity.Warning,
+        title: 'Revisar task com IA',
+        reason: 'Task parada em Draft.',
+        suggestedAction: 'Abrir o fluxo da task e executar a revisao com IA antes de aprovar.',
+        currentStatus: TaskStatus.Draft,
+        createdAt: '2026-06-06T14:00:00.000Z',
+        relatedMetricLabel: '4 h',
+      },
+      {
+        id: 'task-split_task',
+        taskId: 'task-id',
+        taskTitle: 'Implementar API',
+        type: BoardRecommendationType.SplitTask,
+        severity: BoardRecommendationSeverity.Critical,
+        title: 'Revisar bloqueio ou quebrar escopo',
+        reason: 'Task parada em andamento.',
+        suggestedAction: 'Verificar bloqueios, reduzir escopo ou quebrar em tasks menores.',
+        currentStatus: TaskStatus.InProgress,
+        createdAt: '2026-06-06T14:00:00.000Z',
       },
     ],
   },
@@ -111,12 +151,17 @@ describe('AnalyticsDashboardComponent', () => {
       'Taxa sugestoes83%',
       'Sugestoes aceitas5',
       'Tempo aprovacao42 min',
+      'Recomendacoes IA2',
+      'Criticas IA1',
     ]);
     expect(textContent(element)).toContain('Draft2 tasks');
     expect(textContent(element)).toContain('Approved1 tasks');
     expect(textContent(element)).toContain('Tempo por baia');
     expect(textContent(element)).toContain('DraftMedia 2 h4 hPlanejar backlog1 acima');
     expect(textContent(element)).toContain('CompletedMedia 0 min0 minSem tasks0 acima');
+    expect(textContent(element)).toContain('Recomendacoes IA');
+    expect(textContent(element)).toContain('Revisar task com IA');
+    expect(textContent(element)).toContain('Revisar bloqueio ou quebrar escopo');
     expect(textContent(element)).toContain('CMS_SEND_ERROR');
     expect(links).toEqual([
       { href: '/tasks', text: 'Ver tasks' },
@@ -128,6 +173,14 @@ describe('AnalyticsDashboardComponent', () => {
   it('renders an empty recent-event state', () => {
     summary.set({
       ...ANALYTICS_SUMMARY,
+      boardRecommendations: {
+        ...ANALYTICS_SUMMARY.boardRecommendations,
+        total: 0,
+        infoCount: 0,
+        warningCount: 0,
+        criticalCount: 0,
+        recommendations: [],
+      },
       recentEvents: [],
     });
 
@@ -135,5 +188,8 @@ describe('AnalyticsDashboardComponent', () => {
     fixture.detectChanges();
 
     expect(textContent(fixture.nativeElement as HTMLElement)).toContain('Sem eventos recentes.');
+    expect(textContent(fixture.nativeElement as HTMLElement)).toContain(
+      'Sem recomendacoes no momento.',
+    );
   });
 });

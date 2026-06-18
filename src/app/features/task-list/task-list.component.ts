@@ -10,10 +10,12 @@ import {
   STATUS_LABELS,
   TASK_COLUMNS,
   Task,
+  BoardRecommendation,
   TaskBoardTimeMetric,
   TaskFilter,
   TaskStatus,
 } from '../../core/models/task.model';
+import { AiRecommendationService } from '../../core/services/ai-recommendation.service';
 import { BoardAnalyticsService } from '../../core/services/board-analytics.service';
 import { TaskService } from '../../core/services/task.service';
 
@@ -25,6 +27,7 @@ import { TaskService } from '../../core/services/task.service';
 export class TaskListComponent {
   protected readonly taskService = inject(TaskService);
   private readonly boardAnalyticsService = inject(BoardAnalyticsService);
+  private readonly aiRecommendationService = inject(AiRecommendationService);
   protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly priorityLabels = PRIORITY_LABELS;
@@ -50,14 +53,33 @@ export class TaskListComponent {
     () => this.filter() !== 'all' || !!this.searchTerm().trim(),
   );
   protected readonly hasFilteredTasks = computed(() => this.filteredTasks().length > 0);
+  protected readonly boardTimeSummary = computed(() =>
+    this.boardAnalyticsService.summarize(this.filteredTasks()),
+  );
   protected readonly boardTimeMetrics = computed(() =>
-    this.boardAnalyticsService
-      .summarize(this.filteredTasks())
-      .taskMetrics.reduce<Record<string, TaskBoardTimeMetric>>((metrics, metric) => {
+    this.boardTimeSummary().taskMetrics.reduce<Record<string, TaskBoardTimeMetric>>(
+      (metrics, metric) => {
         metrics[metric.taskId] = metric;
 
         return metrics;
-      }, {}),
+      },
+      {},
+    ),
+  );
+  protected readonly recommendationSummary = computed(() =>
+    this.aiRecommendationService.recommend(this.filteredTasks(), this.boardTimeSummary()),
+  );
+  protected readonly recommendationsByTask = computed(() =>
+    this.recommendationSummary().recommendations.reduce<
+      Partial<Record<string, BoardRecommendation[]>>
+    >((recommendations, recommendation) => {
+      recommendations[recommendation.taskId] = [
+        ...(recommendations[recommendation.taskId] ?? []),
+        recommendation,
+      ];
+
+      return recommendations;
+    }, {}),
   );
 
   protected setFilter(filter: TaskFilter): void {

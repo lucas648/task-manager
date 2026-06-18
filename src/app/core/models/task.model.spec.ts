@@ -1,6 +1,8 @@
 import {
   AuditLogEvent,
   BOARD_STATUS_THRESHOLDS_MINUTES,
+  BoardRecommendationSeverity,
+  BoardRecommendationType,
   CHAOS_SCENARIOS,
   FILTER_OPTIONS,
   PRIORITY_LABELS,
@@ -63,6 +65,19 @@ describe('task model constants', () => {
       [TaskStatus.Published]: TaskStatus.InProgress,
       [TaskStatus.InProgress]: TaskStatus.Completed,
     });
+  });
+
+  it('defines board recommendation contracts', () => {
+    expect(Object.values(BoardRecommendationType)).toEqual([
+      'move_task',
+      'review_task',
+      'assign_owner',
+      'split_task',
+      'complete_task',
+      'update_priority',
+      'add_acceptance_criteria',
+    ]);
+    expect(Object.values(BoardRecommendationSeverity)).toEqual(['info', 'warning', 'critical']);
   });
 
   it('defines the phase 4 chaos scenarios', () => {
