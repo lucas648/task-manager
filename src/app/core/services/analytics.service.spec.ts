@@ -208,6 +208,25 @@ describe('AnalyticsService', () => {
       longestTaskId: 'draft-task',
       overThresholdCount: 0,
     });
+    expect(summary.boardRecommendations).toMatchObject({
+      generatedAt: '2026-06-06T14:00:00.000Z',
+      total: 8,
+      infoCount: 4,
+      warningCount: 4,
+      criticalCount: 0,
+    });
+    expect(
+      summary.boardRecommendations.recommendations.map((recommendation) => recommendation.id),
+    ).toEqual([
+      'draft-task-assign_owner',
+      'draft-task-add_acceptance_criteria',
+      'approved-task-assign_owner',
+      'approved-task-add_acceptance_criteria',
+      'published-task-assign_owner',
+      'published-task-add_acceptance_criteria',
+      'error-task-assign_owner',
+      'error-task-add_acceptance_criteria',
+    ]);
     expect(summary.recentEvents.map((event) => event.id)).toEqual([
       'status-log',
       'approved-log',
@@ -244,5 +263,13 @@ describe('AnalyticsService', () => {
     expect(summary.boardTime.statusMetrics.every((metric) => metric.averageMinutes === 0)).toBe(
       true,
     );
+    expect(summary.boardRecommendations).toMatchObject({
+      generatedAt: '2026-06-06T14:00:00.000Z',
+      recommendations: [],
+      total: 0,
+      infoCount: 0,
+      warningCount: 0,
+      criticalCount: 0,
+    });
   });
 });

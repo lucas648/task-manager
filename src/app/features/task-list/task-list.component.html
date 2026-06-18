@@ -64,6 +64,7 @@
           >
             @for (task of tasksByStatus(column.status); track task.id) {
               @let timeMetric = boardTimeMetrics()[task.id];
+              @let recommendations = recommendationsByTask()[task.id] ?? [];
               <article
                 class="task-card"
                 cdkDrag
@@ -136,6 +137,21 @@
 
                 @if (timeMetric?.isOverThreshold) {
                   <p class="task-time-alert">Acima do limite da baia</p>
+                }
+
+                @if (recommendations.length) {
+                  <section class="task-recommendations" aria-label="Sugestoes da IA">
+                    <strong>Sugestoes da IA</strong>
+
+                    <ul>
+                      @for (recommendation of recommendations; track recommendation.id) {
+                        <li class="task-recommendation" [class]="recommendation.severity">
+                          <span>{{ recommendation.title }}</span>
+                          <p>{{ recommendation.suggestedAction }}</p>
+                        </li>
+                      }
+                    </ul>
+                  </section>
                 }
 
                 <label class="status-select">

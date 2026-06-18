@@ -35,6 +35,22 @@ export enum AuditLogEvent {
   ChaosScenarioDisabled = 'CHAOS_SCENARIO_DISABLED',
 }
 
+export enum BoardRecommendationType {
+  MoveTask = 'move_task',
+  ReviewTask = 'review_task',
+  AssignOwner = 'assign_owner',
+  SplitTask = 'split_task',
+  CompleteTask = 'complete_task',
+  UpdatePriority = 'update_priority',
+  AddAcceptanceCriteria = 'add_acceptance_criteria',
+}
+
+export enum BoardRecommendationSeverity {
+  Info = 'info',
+  Warning = 'warning',
+  Critical = 'critical',
+}
+
 export type TaskFilter = 'all' | TaskStatus;
 export type SuggestionDecision = 'pending' | 'applied' | 'rejected';
 export type ChaosScenarioId =
@@ -211,6 +227,29 @@ export interface BoardTimeSummary {
   statusMetrics: BoardStatusTimeMetric[];
 }
 
+export interface BoardRecommendation {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  type: BoardRecommendationType;
+  severity: BoardRecommendationSeverity;
+  title: string;
+  reason: string;
+  suggestedAction: string;
+  currentStatus: TaskStatus;
+  createdAt: string;
+  relatedMetricLabel?: string;
+}
+
+export interface BoardRecommendationSummary {
+  generatedAt: string;
+  recommendations: BoardRecommendation[];
+  total: number;
+  infoCount: number;
+  warningCount: number;
+  criticalCount: number;
+}
+
 export interface AnalyticsSummary {
   totalTasks: number;
   totalAuditLogs: number;
@@ -223,6 +262,7 @@ export interface AnalyticsSummary {
   averageApprovalMinutes: number;
   statusMetrics: StatusMetric[];
   boardTime: BoardTimeSummary;
+  boardRecommendations: BoardRecommendationSummary;
   recentEvents: AuditLog[];
 }
 

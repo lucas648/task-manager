@@ -46,6 +46,14 @@
       <span>Tempo aprovacao</span>
       <strong>{{ summary.averageApprovalMinutes }} min</strong>
     </article>
+    <article>
+      <span>Recomendacoes IA</span>
+      <strong>{{ summary.boardRecommendations.total }}</strong>
+    </article>
+    <article>
+      <span>Criticas IA</span>
+      <strong>{{ summary.boardRecommendations.criticalCount }}</strong>
+    </article>
   </section>
 
   <section class="analytics-layout" aria-label="Indicadores detalhados">
@@ -97,6 +105,28 @@
           </article>
         }
       </div>
+    </section>
+
+    <section class="workflow-panel audit-panel recommendation-panel">
+      <h2>Recomendacoes IA</h2>
+
+      <ol>
+        @for (
+          recommendation of summary.boardRecommendations.recommendations;
+          track recommendation.id
+        ) {
+          <li [class]="recommendation.severity">
+            <div>
+              <strong>{{ recommendation.title }}</strong>
+              <span>{{ recommendation.taskTitle }}</span>
+              <p>{{ recommendation.suggestedAction }}</p>
+            </div>
+            <span>{{ recommendation.severity }}</span>
+          </li>
+        } @empty {
+          <li>Sem recomendacoes no momento.</li>
+        }
+      </ol>
     </section>
 
     <section class="workflow-panel audit-panel analytics-events-panel">
