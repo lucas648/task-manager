@@ -21,7 +21,7 @@ As imagens abaixo sao geradas a partir do app local durante a fase final de poli
 - Criacao de tasks enriquecidas com prioridade, categoria, tags, responsavel, prazo e criterios de aceite.
 - Persistencia local em `localStorage`, incluindo migracao de dados legados.
 - Workflow principal: `Draft -> AI Reviewed -> Approved -> Published -> In Progress -> Completed`.
-- Revisao mockada por IA com sugestoes, score de qualidade e alertas.
+- Revisao por IA via Agent Gateway no backend, com fallback mockado.
 - Aplicacao ou rejeicao individual de sugestoes.
 - Aprovacao humana e geracao de payload JSON.
 - Simulacao de envio para CMS/backend com sucesso e falhas controladas.
@@ -63,6 +63,7 @@ Principais services:
 - `TaskService`: estado das tasks, migracao, persistencia, status, Kanban e audit logs.
 - `AuditLogService`: criacao padronizada de logs.
 - `AiReviewService`: simulacao de revisao por IA.
+- `OpenAiTaskAnalysisProvider`: integracao backend com OpenAI Responses API para a analise inicial.
 - `TaskWorkflowService`: orquestracao do fluxo de negocio.
 - `TaskPayloadBuilderService`: criacao do payload final.
 - `CmsService`: simulacao de backend/CMS.
@@ -97,6 +98,18 @@ Rodar em desenvolvimento:
 
 ```bash
 npm run start
+```
+
+Ativar IA real no backend:
+
+```bash
+OPENAI_API_KEY=sk-... npm run start
+```
+
+Modelo padrao: `gpt-5.5`. Para trocar:
+
+```bash
+OPENAI_API_KEY=sk-... OPENAI_MODEL=gpt-5.5 npm run start
 ```
 
 Validar TypeScript dos testes:
@@ -135,11 +148,17 @@ O projeto usa a configuracao de testes do Angular com Vitest e thresholds de cob
 - Fase 5: observabilidade.
 - Fase 6: Kanban com drag and drop.
 - Fase 7: acabamento de UX, documentacao e preparacao para portfolio.
+- Fase 8: metricas de tempo por baia.
+- Fase 9: recomendacoes deterministicas de IA mockada.
+- Fase 10: contratos agent-ready.
+- Fase 11: Agent Gateway seguro.
+- Fase 12: providers HTTP com fallback.
+- Fase 13: integracao OpenAI no backend para analise inicial.
 
 ## Decisoes tecnicas
 
 - `localStorage` e a persistencia oficial nesta versao.
-- IA, CMS e chaos sao mockados para manter o projeto autocontido.
+- IA usa gateway backend com OpenAI quando `OPENAI_API_KEY` esta disponivel; sem chave ou em falha, cai para mocks para manter o projeto autocontido.
 - Angular CDK e usado apenas onde ha ganho real de interacao: Kanban drag and drop.
 - A aplicacao prioriza componentes standalone e services pequenos.
 - A UI segue uma linguagem operacional, focada em leitura rapida, status e acoes recorrentes.
