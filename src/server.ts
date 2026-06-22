@@ -10,39 +10,59 @@ import {
   AGENT_PROMPT_CONTRACTS,
   AgentContractsResponse,
   AgentGatewayMode,
+  AgentId,
+  AgentRunMetadata,
   BoardRecommendationRequest,
   TaskAnalysisRequest,
 } from './app/core/models/task.model';
 import { MockBoardRecommendationProvider } from './app/core/services/mock-board-recommendation.provider';
 import { MockTaskAnalysisProvider } from './app/core/services/mock-task-analysis.provider';
+import { OpenAiTaskAnalysisProvider } from './app/core/services/openai-task-analysis.provider';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
+const openAiTaskAnalysisProvider = new OpenAiTaskAnalysisProvider();
 const taskAnalysisProvider = new MockTaskAnalysisProvider();
 const boardRecommendationProvider = new MockBoardRecommendationProvider();
-const agentGatewayMode: AgentGatewayMode = 'mock';
 
 app.use('/api/agents', express.json({ limit: '1mb' }));
 
 app.get('/api/agents/contracts', (_req, res) => {
+  const agentGatewayMode = readAgentGatewayMode();
   const response: AgentContractsResponse = {
     mode: agentGatewayMode,
-    contracts: AGENT_PROMPT_CONTRACTS,
+    contracts: {
+      ...AGENT_PROMPT_CONTRACTS,
+      [AgentId.InitialTaskAnalysis]: {
+        ...AGENT_PROMPT_CONTRACTS[AgentId.InitialTaskAnalysis],
+        provider: openAiTaskAnalysisProvider.isConfigured() ? 'openai' : 'mock',
+      },
+    },
     generatedAt: new Date().toISOString(),
   };
 
   res.json(response);
 });
 
-app.post('/api/agents/task-analysis', (req, res) => {
+app.post('/api/agents/task-analysis', async (req, res) => {
   if (!isTaskAnalysisRequest(req.body)) {
     res.status(400).json({ message: 'TaskAnalysisRequest invalido.' });
     return;
   }
 
-  res.json(taskAnalysisProvider.analyze(req.body));
+  if (openAiTaskAnalysisProvider.isConfigured()) {
+    try {
+      res.json(await openAiTaskAnalysisProvider.analyze(req.body));
+      return;
+    } catch (error) {
+      res.json(createFallbackTaskAnalysis(req.body, error));
+      return;
+    }
+  }
+
+  res.json(createFallbackTaskAnalysis(req.body, 'OPENAI_API_KEY nao configurada.'));
 });
 
 app.post('/api/agents/board-recommendations', (req, res) => {
@@ -117,4 +137,20 @@ function isBoardRecommendationRequest(value: unknown): value is BoardRecommendat
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function readAgentGatewayMode(): AgentGatewayMode {
+  return openAiTaskAnalysisProvider.isConfigured() ? 'http' : 'mock';
+}
+
+function createFallbackTaskAnalysis(request: TaskAnalysisRequest, reason: unknown) {
+  const fallbackReview = taskAnalysisProvider.analyze(request);
+
+  return {
+    ...fallbackReview,
+    agentRun: {
+      ...(fallbackReview.agentRun as AgentRunMetadata),
+      fallbackReason: `Fallback mockado no gateway: ${String(reason)}`,
+    },
+  };
 }
