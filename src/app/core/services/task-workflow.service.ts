@@ -18,7 +18,7 @@ export class TaskWorkflowService {
   private readonly payloadBuilder = inject(TaskPayloadBuilderService);
   private readonly taskService = inject(TaskService);
 
-  reviewWithAi(taskId: string): WorkflowActionResult {
+  async reviewWithAi(taskId: string): Promise<WorkflowActionResult> {
     const task = this.taskService.findTask(taskId);
     const canContinue = this.ensureStatus(task, TaskStatus.Draft, 'revisar com IA');
 
@@ -28,7 +28,7 @@ export class TaskWorkflowService {
 
     const reviewedAt = new Date().toISOString();
     try {
-      const review = this.aiReviewService.review(task as Task, reviewedAt);
+      const review = await this.aiReviewService.review(task as Task, reviewedAt);
       const updatedTask = this.taskService.applyWorkflowUpdate(
         taskId,
         {

@@ -224,7 +224,15 @@ describe('HTTP agent providers', () => {
     });
     const provider = TestBed.inject(HttpTaskAnalysisProvider);
 
-    await expect(provider.analyze(TASK_ANALYSIS_REQUEST)).resolves.toEqual(REVIEW_RESULT);
+    await expect(provider.analyze(TASK_ANALYSIS_REQUEST)).resolves.toEqual({
+      ...REVIEW_RESULT,
+      agentRun: {
+        agentId: AgentId.InitialTaskAnalysis,
+        contractVersion: AGENT_CONTRACT_VERSION,
+        provider: 'gateway',
+        generatedAt: REQUESTED_AT,
+      },
+    });
     expect(provider.contract).toEqual({
       ...AGENT_PROMPT_CONTRACTS[AgentId.InitialTaskAnalysis],
       provider: 'gateway',
@@ -247,9 +255,15 @@ describe('HTTP agent providers', () => {
     });
     const provider = TestBed.inject(HttpBoardRecommendationProvider);
 
-    await expect(provider.recommend(BOARD_RECOMMENDATION_REQUEST)).resolves.toEqual(
-      RECOMMENDATION_RESULT,
-    );
+    await expect(provider.recommend(BOARD_RECOMMENDATION_REQUEST)).resolves.toEqual({
+      ...RECOMMENDATION_RESULT,
+      agentRun: {
+        agentId: AgentId.BoardAdvisor,
+        contractVersion: AGENT_CONTRACT_VERSION,
+        provider: 'gateway',
+        generatedAt: REQUESTED_AT,
+      },
+    });
     expect(provider.contract).toEqual({
       ...AGENT_PROMPT_CONTRACTS[AgentId.BoardAdvisor],
       provider: 'gateway',

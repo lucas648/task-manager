@@ -88,7 +88,7 @@ describe('task model constants', () => {
     expect(Object.values(AgentId)).toEqual(['initial_task_analysis_agent', 'board_advisor_agent']);
     expect(AGENT_CONTRACT_VERSION).toBe('taskflow-agent-v1');
     expect(DEFAULT_AGENT_GATEWAY_CONFIG).toEqual({
-      mode: 'mock',
+      mode: 'http',
       baseUrl: '/api/agents',
       endpoints: {
         contracts: 'contracts',

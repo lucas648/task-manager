@@ -35,6 +35,7 @@ export class TaskReviewComponent {
     rejected: 'Rejeitada',
   };
   protected readonly workflowSteps = TASK_COLUMNS;
+  protected readonly isReviewing = signal(false);
   protected readonly message = signal('');
   protected readonly taskId = this.route.snapshot.paramMap.get('taskId') ?? '';
   protected readonly task = computed(() => this.taskService.findTask(this.taskId));
@@ -43,8 +44,20 @@ export class TaskReviewComponent {
     return payload ? JSON.stringify(payload, null, 2) : '';
   });
 
-  protected reviewWithAi(): void {
-    this.setMessage(this.workflowService.reviewWithAi(this.taskId).message);
+  protected async reviewWithAi(): Promise<void> {
+    if (this.isReviewing()) {
+      return;
+    }
+
+    this.isReviewing.set(true);
+    this.setMessage('Revisao da IA em andamento.');
+
+    try {
+      const result = await this.workflowService.reviewWithAi(this.taskId);
+      this.setMessage(result.message);
+    } finally {
+      this.isReviewing.set(false);
+    }
   }
 
   protected approveTask(): void {
