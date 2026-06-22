@@ -7,6 +7,7 @@ import {
   BoardRecommendationSeverity,
   BoardRecommendationType,
   CHAOS_SCENARIOS,
+  DEFAULT_AGENT_GATEWAY_CONFIG,
   FILTER_OPTIONS,
   PRIORITY_LABELS,
   PRIORITY_OPTIONS,
@@ -86,6 +87,15 @@ describe('task model constants', () => {
   it('defines versioned agent contracts for future provider swaps', () => {
     expect(Object.values(AgentId)).toEqual(['initial_task_analysis_agent', 'board_advisor_agent']);
     expect(AGENT_CONTRACT_VERSION).toBe('taskflow-agent-v1');
+    expect(DEFAULT_AGENT_GATEWAY_CONFIG).toEqual({
+      mode: 'mock',
+      baseUrl: '/api/agents',
+      endpoints: {
+        contracts: 'contracts',
+        taskAnalysis: 'task-analysis',
+        boardRecommendations: 'board-recommendations',
+      },
+    });
     expect(AGENT_PROMPT_CONTRACTS).toEqual({
       [AgentId.InitialTaskAnalysis]: {
         agentId: AgentId.InitialTaskAnalysis,

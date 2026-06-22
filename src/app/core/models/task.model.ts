@@ -56,7 +56,8 @@ export enum AgentId {
   BoardAdvisor = 'board_advisor_agent',
 }
 
-export type AgentProviderKind = 'mock' | 'openai';
+export type AgentProviderKind = 'mock' | 'gateway' | 'openai';
+export type AgentGatewayMode = 'mock' | 'http';
 export type TaskFilter = 'all' | TaskStatus;
 export type SuggestionDecision = 'pending' | 'applied' | 'rejected';
 export type ChaosScenarioId =
@@ -274,6 +275,24 @@ export interface AgentRunMetadata {
   generatedAt: string;
 }
 
+export interface AgentGatewayEndpoints {
+  contracts: string;
+  taskAnalysis: string;
+  boardRecommendations: string;
+}
+
+export interface AgentGatewayConfig {
+  mode: AgentGatewayMode;
+  baseUrl: string;
+  endpoints: AgentGatewayEndpoints;
+}
+
+export interface AgentContractsResponse {
+  mode: AgentGatewayMode;
+  contracts: Record<AgentId, AgentPromptContract>;
+  generatedAt: string;
+}
+
 export interface TaskAnalysisRequest {
   task: Task;
   requestedAt: string;
@@ -298,6 +317,16 @@ export interface TaskAnalysisProvider {
 export interface BoardRecommendationProvider {
   readonly contract: AgentPromptContract;
   recommend(request: BoardRecommendationRequest): BoardRecommendationSummary;
+}
+
+export interface AsyncTaskAnalysisProvider {
+  readonly contract: AgentPromptContract;
+  analyze(request: TaskAnalysisRequest): Promise<AiReviewResult>;
+}
+
+export interface AsyncBoardRecommendationProvider {
+  readonly contract: AgentPromptContract;
+  recommend(request: BoardRecommendationRequest): Promise<BoardRecommendationSummary>;
 }
 
 export interface AnalyticsSummary {
@@ -359,6 +388,16 @@ export const PRIORITY_OPTIONS: PriorityOption[] = Object.values(TaskPriority).ma
 export const FILTER_OPTIONS: FilterOption[] = [{ value: 'all', label: 'Todas' }, ...STATUS_OPTIONS];
 
 export const AGENT_CONTRACT_VERSION = 'taskflow-agent-v1';
+
+export const DEFAULT_AGENT_GATEWAY_CONFIG: AgentGatewayConfig = {
+  mode: 'mock',
+  baseUrl: '/api/agents',
+  endpoints: {
+    contracts: 'contracts',
+    taskAnalysis: 'task-analysis',
+    boardRecommendations: 'board-recommendations',
+  },
+};
 
 export const AGENT_PROMPT_CONTRACTS: Record<AgentId, AgentPromptContract> = {
   [AgentId.InitialTaskAnalysis]: {
