@@ -60,8 +60,13 @@
 
         <div class="workflow-actions" aria-label="Acoes do workflow">
           @if (task.status === TaskStatus.Draft) {
-            <button type="button" class="primary-action" (click)="reviewWithAi()">
-              Revisar com IA
+            <button
+              type="button"
+              class="primary-action"
+              [disabled]="isReviewing()"
+              (click)="reviewWithAi()"
+            >
+              {{ isReviewing() ? 'Revisando...' : 'Revisar com IA' }}
             </button>
           } @else if (task.status === TaskStatus.AiReviewed) {
             <button type="button" class="primary-action" (click)="approveTask()">

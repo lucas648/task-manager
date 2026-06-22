@@ -273,6 +273,7 @@ export interface AgentRunMetadata {
   contractVersion: string;
   provider: AgentProviderKind;
   generatedAt: string;
+  fallbackReason?: string;
 }
 
 export interface AgentGatewayEndpoints {
@@ -390,7 +391,7 @@ export const FILTER_OPTIONS: FilterOption[] = [{ value: 'all', label: 'Todas' },
 export const AGENT_CONTRACT_VERSION = 'taskflow-agent-v1';
 
 export const DEFAULT_AGENT_GATEWAY_CONFIG: AgentGatewayConfig = {
-  mode: 'mock',
+  mode: 'http',
   baseUrl: '/api/agents',
   endpoints: {
     contracts: 'contracts',

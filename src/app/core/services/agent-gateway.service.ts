@@ -101,7 +101,15 @@ export class HttpTaskAnalysisProvider implements AsyncTaskAnalysisProvider {
   };
 
   analyze(request: TaskAnalysisRequest): Promise<AiReviewResult> {
-    return this.gatewayClient.analyzeTask(request);
+    return this.gatewayClient.analyzeTask(request).then((result) => ({
+      ...result,
+      agentRun: {
+        agentId: this.contract.agentId,
+        contractVersion: request.contractVersion,
+        provider: this.contract.provider,
+        generatedAt: request.requestedAt,
+      },
+    }));
   }
 }
 
@@ -114,6 +122,14 @@ export class HttpBoardRecommendationProvider implements AsyncBoardRecommendation
   };
 
   recommend(request: BoardRecommendationRequest): Promise<BoardRecommendationSummary> {
-    return this.gatewayClient.recommendBoard(request);
+    return this.gatewayClient.recommendBoard(request).then((result) => ({
+      ...result,
+      agentRun: {
+        agentId: this.contract.agentId,
+        contractVersion: request.contractVersion,
+        provider: this.contract.provider,
+        generatedAt: request.requestedAt,
+      },
+    }));
   }
 }

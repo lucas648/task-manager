@@ -1,7 +1,14 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Task, TaskFilter, TaskPriority, TaskStatus } from '../../core/models/task.model';
+import {
+  DEFAULT_AGENT_GATEWAY_CONFIG,
+  Task,
+  TaskFilter,
+  TaskPriority,
+  TaskStatus,
+} from '../../core/models/task.model';
+import { AGENT_GATEWAY_CONFIG } from '../../core/services/agent-gateway.service';
 import { TaskService } from '../../core/services/task.service';
 import { TaskListComponent } from './task-list.component';
 
@@ -114,6 +121,10 @@ describe('TaskListComponent', () => {
         {
           provide: TaskService,
           useValue: taskService,
+        },
+        {
+          provide: AGENT_GATEWAY_CONFIG,
+          useValue: { ...DEFAULT_AGENT_GATEWAY_CONFIG, mode: 'mock' },
         },
       ],
     }).compileComponents();

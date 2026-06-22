@@ -1,6 +1,6 @@
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
@@ -11,6 +11,7 @@ import {
   TASK_COLUMNS,
   Task,
   BoardRecommendation,
+  BoardRecommendationSummary,
   TaskBoardTimeMetric,
   TaskFilter,
   TaskStatus,
@@ -66,8 +67,8 @@ export class TaskListComponent {
       {},
     ),
   );
-  protected readonly recommendationSummary = computed(() =>
-    this.aiRecommendationService.recommend(this.filteredTasks(), this.boardTimeSummary()),
+  protected readonly recommendationSummary = signal<BoardRecommendationSummary>(
+    this.aiRecommendationService.recommend([], this.boardAnalyticsService.summarize([])),
   );
   protected readonly recommendationsByTask = computed(() =>
     this.recommendationSummary().recommendations.reduce<
@@ -81,6 +82,15 @@ export class TaskListComponent {
       return recommendations;
     }, {}),
   );
+  private readonly recommendationRefresh = effect(() => {
+    const tasks = this.filteredTasks();
+    const boardTime = this.boardTimeSummary();
+
+    this.recommendationSummary.set(this.aiRecommendationService.recommend(tasks, boardTime));
+    void this.aiRecommendationService
+      .recommendAsync(tasks, boardTime)
+      .then((summary) => this.recommendationSummary.set(summary));
+  });
 
   protected setFilter(filter: TaskFilter): void {
     this.filter.set(filter);

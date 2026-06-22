@@ -109,7 +109,7 @@ describe('TaskReviewComponent', () => {
     completeTask: vi.fn(() => ({ success: true, message: 'concluida' })),
     publishTask: vi.fn(() => ({ success: true, message: 'publicada' })),
     rejectSuggestion: vi.fn(() => ({ success: true, message: 'rejeitada' })),
-    reviewWithAi: vi.fn(() => ({ success: true, message: 'revisada' })),
+    reviewWithAi: vi.fn(async () => ({ success: true, message: 'revisada' })),
     startWork: vi.fn(() => ({ success: true, message: 'iniciada' })),
   };
 
@@ -215,7 +215,7 @@ describe('TaskReviewComponent', () => {
     );
   });
 
-  it('runs the expected action for each workflow status', () => {
+  it('runs the expected action for each workflow status', async () => {
     const fixture = TestBed.createComponent(TaskReviewComponent);
     const cases = [
       [TaskStatus.Draft, 'Revisar com IA', workflowService.reviewWithAi, 'revisada'],
@@ -235,12 +235,47 @@ describe('TaskReviewComponent', () => {
 
       expect(button?.textContent).toContain(label);
       button?.click();
+      await fixture.whenStable();
       fixture.detectChanges();
 
       expect(spy).toHaveBeenCalledWith('task-id');
       expect((fixture.nativeElement as HTMLElement).textContent).toContain(message);
       spy.mockClear();
     }
+  });
+
+  it('shows review loading state and prevents duplicated AI review requests', async () => {
+    let resolveReview: (result: { success: boolean; message: string }) => void = () => {};
+    workflowService.reviewWithAi.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveReview = resolve;
+      }),
+    );
+    const fixture = TestBed.createComponent(TaskReviewComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as { reviewWithAi(): Promise<void> };
+
+    const firstReview = component.reviewWithAi();
+    const secondReview = component.reviewWithAi();
+    fixture.detectChanges();
+
+    expect(workflowService.reviewWithAi).toHaveBeenCalledTimes(1);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Revisao da IA em andamento.',
+    );
+    expect((fixture.nativeElement as HTMLElement).querySelector('button')?.textContent).toContain(
+      'Revisando...',
+    );
+
+    await secondReview;
+    resolveReview({ success: true, message: 'revisada' });
+    await firstReview;
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('revisada');
+    expect((fixture.nativeElement as HTMLElement).querySelector('button')?.textContent).toContain(
+      'Revisar com IA',
+    );
   });
 
   it('shows completed tasks without action buttons', () => {

@@ -3,10 +3,12 @@ import {
   AuditLogEvent,
   CmsPayload,
   CmsSendResult,
+  DEFAULT_AGENT_GATEWAY_CONFIG,
   Task,
   TaskPriority,
   TaskStatus,
 } from '../models/task.model';
+import { AGENT_GATEWAY_CONFIG } from './agent-gateway.service';
 import { AiReviewService } from './ai-review.service';
 import { CmsService } from './cms.service';
 import { TaskPayloadBuilderService } from './task-payload-builder.service';
@@ -43,7 +45,15 @@ function setupWorkflow(
   setupStorage(tasks);
 
   TestBed.configureTestingModule({
-    providers: [TaskService, TaskWorkflowService, ...(providers ?? [])],
+    providers: [
+      TaskService,
+      TaskWorkflowService,
+      {
+        provide: AGENT_GATEWAY_CONFIG,
+        useValue: { ...DEFAULT_AGENT_GATEWAY_CONFIG, mode: 'mock' },
+      },
+      ...(providers ?? []),
+    ],
   });
 
   return {
@@ -128,7 +138,7 @@ describe('TaskWorkflowService', () => {
     TestBed.resetTestingModule();
   });
 
-  it('moves a task through the main workflow and records audit logs', () => {
+  it('moves a task through the main workflow and records audit logs', async () => {
     setupCrypto(
       'ai-start-log',
       'ai-status-log',
@@ -144,7 +154,7 @@ describe('TaskWorkflowService', () => {
     );
     const { taskService, workflowService } = setupWorkflow([storedTask()]);
 
-    expect(workflowService.reviewWithAi('task-id')).toMatchObject({
+    await expect(workflowService.reviewWithAi('task-id')).resolves.toMatchObject({
       success: true,
       message: 'Revisao da IA concluida. A task esta pronta para aprovacao humana.',
     });
@@ -316,7 +326,7 @@ describe('TaskWorkflowService', () => {
     );
   });
 
-  it('keeps draft tasks recoverable when AI review fails', () => {
+  it('keeps draft tasks recoverable when AI review fails', async () => {
     setupCrypto('ai-start-log', 'ai-error-log');
     const failingAiService = {
       review: vi.fn(() => {
@@ -328,7 +338,7 @@ describe('TaskWorkflowService', () => {
       [{ provide: AiReviewService, useValue: failingAiService }],
     );
 
-    expect(workflowService.reviewWithAi('task-id')).toMatchObject({
+    await expect(workflowService.reviewWithAi('task-id')).resolves.toMatchObject({
       success: false,
       message: 'IA fora do ar no cenario de caos.',
     });
@@ -355,7 +365,7 @@ describe('TaskWorkflowService', () => {
     ]);
   });
 
-  it('normalizes non-error AI review exceptions', () => {
+  it('normalizes non-error AI review exceptions', async () => {
     const failingAiService = {
       review: vi.fn(() => {
         throw 'resposta quebrada';
@@ -366,17 +376,17 @@ describe('TaskWorkflowService', () => {
       [{ provide: AiReviewService, useValue: failingAiService }],
     );
 
-    expect(workflowService.reviewWithAi('task-id')).toMatchObject({
+    await expect(workflowService.reviewWithAi('task-id')).resolves.toMatchObject({
       success: false,
       message: 'Nao foi possivel concluir a revisao da IA.',
     });
   });
 
-  it('rejects missing tasks and invalid workflow order', () => {
+  it('rejects missing tasks and invalid workflow order', async () => {
     setupCrypto('unused-log');
     const { workflowService } = setupWorkflow([storedTask()]);
 
-    expect(workflowService.reviewWithAi('missing')).toEqual({
+    await expect(workflowService.reviewWithAi('missing')).resolves.toEqual({
       success: false,
       message: 'Task nao encontrada.',
     });
