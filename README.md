@@ -21,7 +21,7 @@ As imagens abaixo sao geradas a partir do app local durante a fase final de poli
 - Criacao de tasks enriquecidas com prioridade, categoria, tags, responsavel, prazo e criterios de aceite.
 - Persistencia local em `localStorage`, incluindo migracao de dados legados.
 - Workflow principal: `Draft -> AI Reviewed -> Approved -> Published -> In Progress -> Completed`.
-- Revisao por IA via Agent Gateway no backend, com fallback mockado.
+- Revisao inicial e recomendacoes do board via Agent Gateway no backend, com fallback mockado.
 - Aplicacao ou rejeicao individual de sugestoes.
 - Aprovacao humana e geracao de payload JSON.
 - Simulacao de envio para CMS/backend com sucesso e falhas controladas.
@@ -62,8 +62,10 @@ Principais services:
 
 - `TaskService`: estado das tasks, migracao, persistencia, status, Kanban e audit logs.
 - `AuditLogService`: criacao padronizada de logs.
-- `AiReviewService`: simulacao de revisao por IA.
+- `AiReviewService`: orquestracao da revisao por IA com fallback mockado.
+- `AiRecommendationService`: recomendacoes operacionais do board com gateway e fallback mockado.
 - `OpenAiTaskAnalysisProvider`: integracao backend com OpenAI Responses API para a analise inicial.
+- `OpenAiBoardRecommendationProvider`: integracao backend com OpenAI Responses API para o Board Advisor.
 - `TaskWorkflowService`: orquestracao do fluxo de negocio.
 - `TaskPayloadBuilderService`: criacao do payload final.
 - `CmsService`: simulacao de backend/CMS.
@@ -100,7 +102,7 @@ Rodar em desenvolvimento:
 npm run start
 ```
 
-Ativar IA real no backend:
+Ativar IA real no backend para analise inicial e recomendacoes do board:
 
 ```bash
 OPENAI_API_KEY=sk-... npm run start
@@ -154,11 +156,12 @@ O projeto usa a configuracao de testes do Angular com Vitest e thresholds de cob
 - Fase 11: Agent Gateway seguro.
 - Fase 12: providers HTTP com fallback.
 - Fase 13: integracao OpenAI no backend para analise inicial.
+- Fase 14: integracao OpenAI no backend para recomendacoes do Board Advisor.
 
 ## Decisoes tecnicas
 
 - `localStorage` e a persistencia oficial nesta versao.
-- IA usa gateway backend com OpenAI quando `OPENAI_API_KEY` esta disponivel; sem chave ou em falha, cai para mocks para manter o projeto autocontido.
+- IA usa gateway backend com OpenAI quando `OPENAI_API_KEY` esta disponivel; sem chave ou em falha, analise inicial e recomendacoes do board caem para mocks para manter o projeto autocontido.
 - Angular CDK e usado apenas onde ha ganho real de interacao: Kanban drag and drop.
 - A aplicacao prioriza componentes standalone e services pequenos.
 - A UI segue uma linguagem operacional, focada em leitura rapida, status e acoes recorrentes.

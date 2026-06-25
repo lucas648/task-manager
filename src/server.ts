@@ -17,12 +17,14 @@ import {
 } from './app/core/models/task.model';
 import { MockBoardRecommendationProvider } from './app/core/services/mock-board-recommendation.provider';
 import { MockTaskAnalysisProvider } from './app/core/services/mock-task-analysis.provider';
+import { OpenAiBoardRecommendationProvider } from './app/core/services/openai-board-recommendation.provider';
 import { OpenAiTaskAnalysisProvider } from './app/core/services/openai-task-analysis.provider';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
+const openAiBoardRecommendationProvider = new OpenAiBoardRecommendationProvider();
 const openAiTaskAnalysisProvider = new OpenAiTaskAnalysisProvider();
 const taskAnalysisProvider = new MockTaskAnalysisProvider();
 const boardRecommendationProvider = new MockBoardRecommendationProvider();
@@ -38,6 +40,10 @@ app.get('/api/agents/contracts', (_req, res) => {
       [AgentId.InitialTaskAnalysis]: {
         ...AGENT_PROMPT_CONTRACTS[AgentId.InitialTaskAnalysis],
         provider: openAiTaskAnalysisProvider.isConfigured() ? 'openai' : 'mock',
+      },
+      [AgentId.BoardAdvisor]: {
+        ...AGENT_PROMPT_CONTRACTS[AgentId.BoardAdvisor],
+        provider: openAiBoardRecommendationProvider.isConfigured() ? 'openai' : 'mock',
       },
     },
     generatedAt: new Date().toISOString(),
@@ -65,13 +71,23 @@ app.post('/api/agents/task-analysis', async (req, res) => {
   res.json(createFallbackTaskAnalysis(req.body, 'OPENAI_API_KEY nao configurada.'));
 });
 
-app.post('/api/agents/board-recommendations', (req, res) => {
+app.post('/api/agents/board-recommendations', async (req, res) => {
   if (!isBoardRecommendationRequest(req.body)) {
     res.status(400).json({ message: 'BoardRecommendationRequest invalido.' });
     return;
   }
 
-  res.json(boardRecommendationProvider.recommend(req.body));
+  if (openAiBoardRecommendationProvider.isConfigured()) {
+    try {
+      res.json(await openAiBoardRecommendationProvider.recommend(req.body));
+      return;
+    } catch (error) {
+      res.json(createFallbackBoardRecommendations(req.body, error));
+      return;
+    }
+  }
+
+  res.json(createFallbackBoardRecommendations(req.body, 'OPENAI_API_KEY nao configurada.'));
 });
 
 /**
@@ -140,7 +156,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function readAgentGatewayMode(): AgentGatewayMode {
-  return openAiTaskAnalysisProvider.isConfigured() ? 'http' : 'mock';
+  return openAiTaskAnalysisProvider.isConfigured() ||
+    openAiBoardRecommendationProvider.isConfigured()
+    ? 'http'
+    : 'mock';
 }
 
 function createFallbackTaskAnalysis(request: TaskAnalysisRequest, reason: unknown) {
@@ -150,6 +169,18 @@ function createFallbackTaskAnalysis(request: TaskAnalysisRequest, reason: unknow
     ...fallbackReview,
     agentRun: {
       ...(fallbackReview.agentRun as AgentRunMetadata),
+      fallbackReason: `Fallback mockado no gateway: ${String(reason)}`,
+    },
+  };
+}
+
+function createFallbackBoardRecommendations(request: BoardRecommendationRequest, reason: unknown) {
+  const fallbackRecommendations = boardRecommendationProvider.recommend(request);
+
+  return {
+    ...fallbackRecommendations,
+    agentRun: {
+      ...(fallbackRecommendations.agentRun as AgentRunMetadata),
       fallbackReason: `Fallback mockado no gateway: ${String(reason)}`,
     },
   };
