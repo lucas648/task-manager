@@ -20,6 +20,7 @@ As imagens abaixo sao geradas a partir do app local durante a fase final de poli
 
 - Criacao de tasks enriquecidas com prioridade, categoria, tags, responsavel, prazo e criterios de aceite.
 - Persistencia encapsulada por repository, com `localStorage` no frontend e API backend de tasks.
+- Autenticacao local de desenvolvimento com sessao persistida, guards de rotas e tela de perfil.
 - Workflow principal: `Draft -> AI Reviewed -> Approved -> Published -> In Progress -> Completed`.
 - Revisao por IA via Agent Gateway no backend, com fallback mockado.
 - Aplicacao ou rejeicao individual de sugestoes.
@@ -35,12 +36,14 @@ As imagens abaixo sao geradas a partir do app local durante a fase final de poli
 
 | Rota                    | Tela                             |
 | ----------------------- | -------------------------------- |
+| `/login`                | Login com perfis demo            |
 | `/`                     | Home com resumo operacional      |
 | `/tasks`                | Board Kanban e filtros           |
 | `/tasks/new`            | Criacao de task                  |
 | `/tasks/:taskId/review` | Revisao, IA, aprovacao e payload |
 | `/chaos`                | Chaos Dashboard                  |
 | `/analytics`            | Observabilidade e auditoria      |
+| `/profile`              | Perfil do usuario autenticado    |
 
 ## Arquitetura
 
@@ -63,6 +66,8 @@ Principais services:
 - `TaskService`: estado das tasks, status, Kanban e audit logs.
 - `LocalStorageTaskRepository`: persistencia local e migracao de dados legados.
 - `TaskApiClient`: client HTTP para a API backend de tasks.
+- `AuthService`: sessao local, login, logout e atualizacao de perfil.
+- `authGuard` e `guestGuard`: protecao das rotas autenticadas e da rota de login.
 - `AuditLogService`: criacao padronizada de logs.
 - `AiReviewService`: simulacao de revisao por IA.
 - `OpenAiTaskAnalysisProvider`: integracao backend com OpenAI Responses API para a analise inicial.
@@ -122,6 +127,14 @@ TASKFLOW_TASKS_FILE=.taskflow/tasks.json npm run start
 
 Quando `TASKFLOW_TASKS_FILE` nao e informado, a API usa `.taskflow/tasks.json` no diretorio do projeto.
 
+Perfis demo:
+
+| Perfil        | E-mail                  | Senha       |
+| ------------- | ----------------------- | ----------- |
+| Administrador | `admin@taskflow.local`  | `admin123`  |
+| Gestor        | `gestor@taskflow.local` | `gestor123` |
+| Membro        | `membro@taskflow.local` | `membro123` |
+
 ## API de tasks
 
 | Metodo   | Endpoint                    | Uso                           |
@@ -176,10 +189,12 @@ O projeto usa a configuracao de testes do Angular com Vitest e thresholds de cob
 - Fase 12: providers HTTP com fallback.
 - Fase 13: integracao OpenAI no backend para analise inicial.
 - Fase 15: repository de tasks e API backend de persistencia.
+- Fase 16: autenticacao local, guards e perfil de usuario.
 
 ## Decisoes tecnicas
 
 - `localStorage` segue como repository ativo do frontend nesta versao, agora isolado por `TaskRepository`.
+- Autenticacao tambem usa `localStorage` nesta fase para manter o app autocontido; backend auth real fica preparado para uma fase posterior.
 - A API backend de tasks persiste em JSON local para preparar a troca futura para banco de dados sem reescrever componentes.
 - IA usa gateway backend com OpenAI quando `OPENAI_API_KEY` esta disponivel; sem chave ou em falha, cai para mocks para manter o projeto autocontido.
 - Angular CDK e usado apenas onde ha ganho real de interacao: Kanban drag and drop.
