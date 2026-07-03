@@ -19,7 +19,7 @@ As imagens abaixo sao geradas a partir do app local durante a fase final de poli
 ## Funcionalidades
 
 - Criacao de tasks enriquecidas com prioridade, categoria, tags, responsavel, prazo e criterios de aceite.
-- Persistencia local em `localStorage`, incluindo migracao de dados legados.
+- Persistencia encapsulada por repository, com `localStorage` no frontend e API backend de tasks.
 - Workflow principal: `Draft -> AI Reviewed -> Approved -> Published -> In Progress -> Completed`.
 - Revisao por IA via Agent Gateway no backend, com fallback mockado.
 - Aplicacao ou rejeicao individual de sugestoes.
@@ -60,7 +60,9 @@ src/app/
 
 Principais services:
 
-- `TaskService`: estado das tasks, migracao, persistencia, status, Kanban e audit logs.
+- `TaskService`: estado das tasks, status, Kanban e audit logs.
+- `LocalStorageTaskRepository`: persistencia local e migracao de dados legados.
+- `TaskApiClient`: client HTTP para a API backend de tasks.
 - `AuditLogService`: criacao padronizada de logs.
 - `AiReviewService`: simulacao de revisao por IA.
 - `OpenAiTaskAnalysisProvider`: integracao backend com OpenAI Responses API para a analise inicial.
@@ -112,6 +114,25 @@ Modelo padrao: `gpt-5.5`. Para trocar:
 OPENAI_API_KEY=sk-... OPENAI_MODEL=gpt-5.5 npm run start
 ```
 
+Persistencia backend de tasks:
+
+```bash
+TASKFLOW_TASKS_FILE=.taskflow/tasks.json npm run start
+```
+
+Quando `TASKFLOW_TASKS_FILE` nao e informado, a API usa `.taskflow/tasks.json` no diretorio do projeto.
+
+## API de tasks
+
+| Metodo   | Endpoint                    | Uso                           |
+| -------- | --------------------------- | ----------------------------- |
+| `GET`    | `/api/tasks`                | Lista tasks persistidas       |
+| `PUT`    | `/api/tasks`                | Substitui a colecao de tasks  |
+| `POST`   | `/api/tasks`                | Cria ou atualiza uma task     |
+| `PATCH`  | `/api/tasks/:taskId`        | Atualiza campos de uma task   |
+| `PATCH`  | `/api/tasks/:taskId/status` | Atualiza o status de uma task |
+| `DELETE` | `/api/tasks/:taskId`        | Remove uma task               |
+
 Validar TypeScript dos testes:
 
 ```bash
@@ -154,10 +175,12 @@ O projeto usa a configuracao de testes do Angular com Vitest e thresholds de cob
 - Fase 11: Agent Gateway seguro.
 - Fase 12: providers HTTP com fallback.
 - Fase 13: integracao OpenAI no backend para analise inicial.
+- Fase 15: repository de tasks e API backend de persistencia.
 
 ## Decisoes tecnicas
 
-- `localStorage` e a persistencia oficial nesta versao.
+- `localStorage` segue como repository ativo do frontend nesta versao, agora isolado por `TaskRepository`.
+- A API backend de tasks persiste em JSON local para preparar a troca futura para banco de dados sem reescrever componentes.
 - IA usa gateway backend com OpenAI quando `OPENAI_API_KEY` esta disponivel; sem chave ou em falha, cai para mocks para manter o projeto autocontido.
 - Angular CDK e usado apenas onde ha ganho real de interacao: Kanban drag and drop.
 - A aplicacao prioriza componentes standalone e services pequenos.
