@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, computed, signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { App } from './app';
+import { AuthSession } from './core/models/auth.model';
+import { AuthService } from './core/services/auth.service';
 
 @Component({
   standalone: true,
@@ -10,6 +12,19 @@ import { App } from './app';
 class RouteStubComponent {}
 
 const THEME_STORAGE_KEY = 'taskflow.theme';
+const AUTH_SESSION: AuthSession = {
+  id: 'user-admin',
+  email: 'admin@taskflow.local',
+  displayName: 'Ana Admin',
+  role: 'admin',
+  team: 'Operacoes',
+  timezone: 'America/Sao_Paulo',
+  createdAt: '2026-07-01T09:00:00.000Z',
+  issuedAt: '2026-07-03T12:00:00.000Z',
+};
+
+let authSession: WritableSignal<AuthSession | undefined>;
+let logoutSpy: ReturnType<typeof vi.fn>;
 
 function setupThemeStorage(initialValue: string | null = null) {
   let storedValue = initialValue;
@@ -31,6 +46,8 @@ function setupThemeStorage(initialValue: string | null = null) {
 
 describe('App', () => {
   beforeEach(async () => {
+    authSession = signal<AuthSession | undefined>(AUTH_SESSION);
+    logoutSpy = vi.fn(() => authSession.set(undefined));
     setupThemeStorage();
     document.documentElement.removeAttribute('data-theme');
     document.documentElement.style.colorScheme = '';
@@ -44,7 +61,17 @@ describe('App', () => {
           { path: 'tasks/new', component: RouteStubComponent },
           { path: 'chaos', component: RouteStubComponent },
           { path: 'analytics', component: RouteStubComponent },
+          { path: 'profile', component: RouteStubComponent },
+          { path: 'login', component: RouteStubComponent },
         ]),
+        {
+          provide: AuthService,
+          useValue: {
+            currentUser: computed(() => authSession()),
+            isAuthenticated: computed(() => authSession() !== undefined),
+            logout: logoutSpy,
+          },
+        },
       ],
     }).compileComponents();
   });
@@ -88,7 +115,35 @@ describe('App', () => {
       { active: true, text: 'Nova task' },
       { active: false, text: 'Chaos' },
       { active: false, text: 'Analytics' },
+      { active: false, text: 'Perfil' },
     ]);
+  });
+
+  it('renders login navigation when no user is authenticated', async () => {
+    authSession.set(undefined);
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.site-nav nav')).toBeNull();
+    expect(compiled.querySelector('.login-link')?.textContent?.trim()).toBe('Login');
+  });
+
+  it('logs out and navigates to login', async () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl');
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.logout-button')
+      ?.click();
+
+    expect(logoutSpy).toHaveBeenCalledOnce();
+    expect(navigateSpy).toHaveBeenCalledWith('/login');
   });
 
   it('should toggle and persist the app theme', async () => {

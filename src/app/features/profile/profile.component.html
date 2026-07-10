@@ -1,0 +1,56 @@
+<main class="task-shell">
+  <header class="screen-header">
+    <div>
+      <p class="eyebrow">Perfil</p>
+      <h1>Conta e contexto</h1>
+    </div>
+  </header>
+
+  @if (user(); as currentUser) {
+    <section class="profile-layout" aria-label="Perfil do usuario">
+      <dl class="profile-summary">
+        <div>
+          <dt>Nome</dt>
+          <dd>{{ currentUser.displayName }}</dd>
+        </div>
+        <div>
+          <dt>E-mail</dt>
+          <dd>{{ currentUser.email }}</dd>
+        </div>
+        <div>
+          <dt>Perfil</dt>
+          <dd>{{ roleLabel() }}</dd>
+        </div>
+        <div>
+          <dt>Time</dt>
+          <dd>{{ currentUser.team }}</dd>
+        </div>
+      </dl>
+
+      <form class="task-form profile-form" [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+        <label class="field field-title">
+          <span>Nome exibido</span>
+          <input type="text" formControlName="displayName" autocomplete="name" />
+        </label>
+
+        <label class="field field-category">
+          <span>Time</span>
+          <input type="text" formControlName="team" autocomplete="organization" />
+        </label>
+
+        <label class="field field-category">
+          <span>Timezone</span>
+          <input type="text" formControlName="timezone" autocomplete="off" />
+        </label>
+
+        <button class="primary-action" type="submit">Salvar perfil</button>
+      </form>
+
+      @if (savedMessage) {
+        <p class="success-message">{{ savedMessage }}</p>
+      } @else if (profileForm.invalid && profileForm.touched) {
+        <p class="form-error">Preencha todos os campos do perfil.</p>
+      }
+    </section>
+  }
+</main>

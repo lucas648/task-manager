@@ -129,6 +129,38 @@
       </ol>
     </section>
 
+    <section class="workflow-panel audit-panel agent-runs-panel">
+      <h2>Runs de agentes</h2>
+
+      <div class="agent-run-kpis" aria-label="Resumo de runs de agentes">
+        <span>{{ agentRunService.activeRuns().length }} ativos</span>
+        <span>{{ agentRunService.completedRunsCount() }} concluidos</span>
+        <span>{{ agentRunService.failedRunsCount() }} falhas</span>
+        <span>{{ agentRunService.averageDurationMs() }} ms media</span>
+      </div>
+
+      <ol>
+        @for (run of agentRunService.recentRuns(); track run.id) {
+          <li [class]="run.status">
+            <div>
+              <strong>{{ agentRunOperationLabels[run.operation] }}</strong>
+              <span>{{ run.taskTitle ?? run.inputSummary }}</span>
+              <p>{{ run.outputSummary ?? run.errorMessage ?? 'Aguardando conclusao.' }}</p>
+              @if (run.fallbackReason) {
+                <p>{{ run.fallbackReason }}</p>
+              }
+            </div>
+            <span>
+              {{ agentRunStatusLabels[run.status] }} · {{ run.provider }} ·
+              {{ formatRunDuration(run) }}
+            </span>
+          </li>
+        } @empty {
+          <li>Sem runs registrados.</li>
+        }
+      </ol>
+    </section>
+
     <section class="workflow-panel audit-panel analytics-events-panel">
       <h2>Eventos recentes</h2>
 

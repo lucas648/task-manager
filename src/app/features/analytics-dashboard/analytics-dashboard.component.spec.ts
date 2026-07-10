@@ -1,13 +1,16 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { AgentRunRecord } from '../../core/models/agent-run.model';
 import {
   AnalyticsSummary,
   AuditLogEvent,
+  AgentId,
   BoardRecommendationSeverity,
   BoardRecommendationType,
   TaskStatus,
 } from '../../core/models/task.model';
+import { AgentRunService } from '../../core/services/agent-run.service';
 import { AnalyticsService } from '../../core/services/analytics.service';
 import { AnalyticsDashboardComponent } from './analytics-dashboard.component';
 
@@ -96,6 +99,48 @@ const ANALYTICS_SUMMARY: AnalyticsSummary = {
     },
   ],
 };
+const AGENT_RUNS: AgentRunRecord[] = [
+  {
+    id: 'agent-run-completed',
+    agentId: AgentId.InitialTaskAnalysis,
+    operation: 'task_review',
+    status: 'completed',
+    provider: 'gateway',
+    createdAt: '2026-06-06T11:59:58.000Z',
+    updatedAt: '2026-06-06T12:00:00.000Z',
+    startedAt: '2026-06-06T11:59:58.000Z',
+    completedAt: '2026-06-06T12:00:00.000Z',
+    durationMs: 2000,
+    taskId: 'task-id',
+    taskTitle: 'Planejar backlog',
+    inputSummary: 'Revisar Planejar backlog',
+    outputSummary: 'Task clara',
+    outputCount: 1,
+  },
+  {
+    id: 'agent-run-running',
+    agentId: AgentId.BoardAdvisor,
+    operation: 'board_recommendation',
+    status: 'running',
+    provider: 'mock',
+    createdAt: '2026-06-06T12:00:00.000Z',
+    updatedAt: '2026-06-06T12:00:00.000Z',
+    inputSummary: '4 tasks analisadas',
+  },
+  {
+    id: 'agent-run-failed',
+    agentId: AgentId.BoardAdvisor,
+    operation: 'board_recommendation',
+    status: 'failed',
+    provider: 'gateway',
+    createdAt: '2026-06-06T12:00:00.000Z',
+    updatedAt: '2026-06-06T12:00:02.000Z',
+    durationMs: 2000,
+    inputSummary: 'Board completo',
+    errorMessage: 'Gateway indisponivel',
+    fallbackReason: 'Fallback mockado',
+  },
+];
 
 function textContent(fixtureElement: HTMLElement): string {
   return fixtureElement.textContent?.replace(/\s+/g, ' ').trim() ?? '';
@@ -109,12 +154,22 @@ function summaryCards(fixtureElement: HTMLElement): string[] {
 
 describe('AnalyticsDashboardComponent', () => {
   const summary = signal<AnalyticsSummary>(ANALYTICS_SUMMARY);
+  const recentRuns = signal<AgentRunRecord[]>(AGENT_RUNS);
   const analyticsService = {
     summary,
+  };
+  const agentRunService = {
+    recentRuns,
+    activeRuns: () =>
+      recentRuns().filter((run) => run.status === 'queued' || run.status === 'running'),
+    completedRunsCount: () => recentRuns().filter((run) => run.status === 'completed').length,
+    failedRunsCount: () => recentRuns().filter((run) => run.status === 'failed').length,
+    averageDurationMs: () => 2000,
   };
 
   beforeEach(async () => {
     summary.set(ANALYTICS_SUMMARY);
+    recentRuns.set(AGENT_RUNS);
 
     await TestBed.configureTestingModule({
       imports: [AnalyticsDashboardComponent],
@@ -123,6 +178,10 @@ describe('AnalyticsDashboardComponent', () => {
         {
           provide: AnalyticsService,
           useValue: analyticsService,
+        },
+        {
+          provide: AgentRunService,
+          useValue: agentRunService,
         },
       ],
     }).compileComponents();
@@ -162,6 +221,15 @@ describe('AnalyticsDashboardComponent', () => {
     expect(textContent(element)).toContain('Recomendacoes IA');
     expect(textContent(element)).toContain('Revisar task com IA');
     expect(textContent(element)).toContain('Revisar bloqueio ou quebrar escopo');
+    expect(textContent(element)).toContain('Runs de agentes');
+    expect(textContent(element)).toContain('1 ativos');
+    expect(textContent(element)).toContain('1 concluidos');
+    expect(textContent(element)).toContain('1 falhas');
+    expect(textContent(element)).toContain('2000 ms media');
+    expect(textContent(element)).toContain('Analise inicialPlanejar backlogTask clara');
+    expect(textContent(element)).toContain('Board Advisor4 tasks analisadasAguardando conclusao.');
+    expect(textContent(element)).toContain('Board AdvisorBoard completoGateway indisponivel');
+    expect(textContent(element)).toContain('Fallback mockado');
     expect(textContent(element)).toContain('CMS_SEND_ERROR');
     expect(links).toEqual([
       { href: '/tasks', text: 'Ver tasks' },
@@ -183,6 +251,7 @@ describe('AnalyticsDashboardComponent', () => {
       },
       recentEvents: [],
     });
+    recentRuns.set([]);
 
     const fixture = TestBed.createComponent(AnalyticsDashboardComponent);
     fixture.detectChanges();
@@ -191,5 +260,6 @@ describe('AnalyticsDashboardComponent', () => {
     expect(textContent(fixture.nativeElement as HTMLElement)).toContain(
       'Sem recomendacoes no momento.',
     );
+    expect(textContent(fixture.nativeElement as HTMLElement)).toContain('Sem runs registrados.');
   });
 });

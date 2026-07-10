@@ -1,41 +1,67 @@
 <header class="site-nav">
   <a class="brand" routerLink="/">TaskFlow AI</a>
 
-  <nav aria-label="Navegacao principal">
-    <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
-      Home
-    </a>
-    <a routerLink="/tasks" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
-      Tasks
-    </a>
-    <a
-      routerLink="/tasks/new"
-      routerLinkActive="is-active"
-      [routerLinkActiveOptions]="{ exact: true }"
-    >
-      Nova task
-    </a>
-    <a routerLink="/chaos" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
-      Chaos
-    </a>
-    <a
-      routerLink="/analytics"
-      routerLinkActive="is-active"
-      [routerLinkActiveOptions]="{ exact: true }"
-    >
-      Analytics
-    </a>
-  </nav>
+  @if (authService.isAuthenticated()) {
+    <nav aria-label="Navegacao principal">
+      <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
+        Home
+      </a>
+      <a
+        routerLink="/tasks"
+        routerLinkActive="is-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Tasks
+      </a>
+      <a
+        routerLink="/tasks/new"
+        routerLinkActive="is-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Nova task
+      </a>
+      <a
+        routerLink="/chaos"
+        routerLinkActive="is-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Chaos
+      </a>
+      <a
+        routerLink="/analytics"
+        routerLinkActive="is-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Analytics
+      </a>
+      <a
+        routerLink="/profile"
+        routerLinkActive="is-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Perfil
+      </a>
+    </nav>
+  }
 
-  <button
-    type="button"
-    class="theme-toggle"
-    (click)="themeService.toggleTheme()"
-    [attr.aria-pressed]="themeService.isDarkMode()"
-    [attr.aria-label]="themeService.isDarkMode() ? 'Ativar modo claro' : 'Ativar modo escuro'"
-  >
-    {{ themeService.isDarkMode() ? 'Modo claro' : 'Modo escuro' }}
-  </button>
+  <div class="site-actions">
+    @if (authService.currentUser(); as user) {
+      <span class="session-pill">{{ user.displayName }}</span>
+      <button type="button" class="logout-button" (click)="logout()">Sair</button>
+    } @else {
+      <a class="secondary-action login-link" routerLink="/login">Login</a>
+    }
+
+    <button
+      type="button"
+      class="theme-toggle"
+      (click)="themeService.toggleTheme()"
+      [attr.aria-pressed]="themeService.isDarkMode()"
+      [attr.aria-label]="themeService.isDarkMode() ? 'Ativar modo claro' : 'Ativar modo escuro'"
+    >
+      {{ themeService.isDarkMode() ? 'Modo claro' : 'Modo escuro' }}
+    </button>
+  </div>
 </header>
 
 <router-outlet />

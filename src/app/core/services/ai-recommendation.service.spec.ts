@@ -12,6 +12,7 @@ import {
   TaskStatus,
 } from '../models/task.model';
 import { BOARD_RECOMMENDATION_PROVIDER } from './agent-provider.tokens';
+import { AgentRunService } from './agent-run.service';
 import { AGENT_GATEWAY_CONFIG, HttpBoardRecommendationProvider } from './agent-gateway.service';
 import { AiRecommendationService } from './ai-recommendation.service';
 
@@ -100,7 +101,8 @@ function setupService(
   provider = createProvider(),
   gatewayConfig: AgentGatewayConfig = { ...DEFAULT_AGENT_GATEWAY_CONFIG, mode: 'mock' },
   httpProvider = createHttpProvider(),
-): AiRecommendationService {
+  agentRunService = createAgentRunService(),
+): { service: AiRecommendationService; agentRunService: ReturnType<typeof createAgentRunService> } {
   TestBed.configureTestingModule({
     providers: [
       AiRecommendationService,
@@ -113,13 +115,29 @@ function setupService(
         useValue: gatewayConfig,
       },
       {
+        provide: AgentRunService,
+        useValue: agentRunService,
+      },
+      {
         provide: HttpBoardRecommendationProvider,
         useValue: httpProvider,
       },
     ],
   });
 
-  return TestBed.inject(AiRecommendationService);
+  return {
+    service: TestBed.inject(AiRecommendationService),
+    agentRunService,
+  };
+}
+
+function createAgentRunService() {
+  return {
+    queueRun: vi.fn(() => ({ id: 'run-id' })),
+    startRun: vi.fn(),
+    completeRun: vi.fn(),
+    failRun: vi.fn(),
+  };
 }
 
 describe('AiRecommendationService', () => {
@@ -132,7 +150,7 @@ describe('AiRecommendationService', () => {
     const tasks = [createTask()];
     const boardTime = createSummary(tasks);
 
-    const summary = setupService(provider).recommend(tasks, boardTime);
+    const summary = setupService(provider).service.recommend(tasks, boardTime);
 
     expect(provider.recommend).toHaveBeenCalledWith({
       tasks,
@@ -152,7 +170,7 @@ describe('AiRecommendationService', () => {
     const tasks = [createTask()];
     const boardTime = createSummary(tasks);
 
-    setupService(provider).recommend(tasks, boardTime, explicitDate);
+    setupService(provider).service.recommend(tasks, boardTime, explicitDate);
 
     expect(provider.recommend).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -166,15 +184,36 @@ describe('AiRecommendationService', () => {
     const httpProvider = createHttpProvider();
     const tasks = [createTask()];
     const boardTime = createSummary(tasks);
-    const summary = await setupService(
+    const { service, agentRunService } = setupService(
       provider,
       { ...DEFAULT_AGENT_GATEWAY_CONFIG, mode: 'mock' },
       httpProvider,
-    ).recommendAsync(tasks, boardTime);
+    );
+    const summary = await service.recommendAsync(tasks, boardTime);
 
     expect(provider.recommend).toHaveBeenCalledOnce();
     expect(httpProvider.recommend).not.toHaveBeenCalled();
     expect(summary.total).toBe(1);
+    expect(agentRunService.queueRun).toHaveBeenCalledWith(
+      {
+        agentId: AgentId.BoardAdvisor,
+        operation: 'board_recommendation',
+        provider: 'mock',
+        inputSummary: '1 tasks analisadas',
+      },
+      GENERATED_AT.toISOString(),
+    );
+    expect(agentRunService.startRun).toHaveBeenCalledWith('run-id', GENERATED_AT.toISOString());
+    expect(agentRunService.completeRun).toHaveBeenCalledWith(
+      'run-id',
+      {
+        provider: undefined,
+        outputSummary: '1 recomendacoes',
+        outputCount: 1,
+        fallbackReason: undefined,
+      },
+      GENERATED_AT.toISOString(),
+    );
   });
 
   it('uses the gateway provider for async recommendations when HTTP mode is active', async () => {
@@ -182,11 +221,12 @@ describe('AiRecommendationService', () => {
     const httpProvider = createHttpProvider();
     const tasks = [createTask()];
     const boardTime = createSummary(tasks);
-    const summary = await setupService(
+    const { service, agentRunService } = setupService(
       provider,
       { ...DEFAULT_AGENT_GATEWAY_CONFIG, mode: 'http' },
       httpProvider,
-    ).recommendAsync(tasks, boardTime);
+    );
+    const summary = await service.recommendAsync(tasks, boardTime);
 
     expect(httpProvider.recommend).toHaveBeenCalledWith({
       tasks,
@@ -201,6 +241,14 @@ describe('AiRecommendationService', () => {
         provider: 'gateway',
       },
     });
+    expect(agentRunService.completeRun).toHaveBeenCalledWith(
+      'run-id',
+      expect.objectContaining({
+        provider: 'gateway',
+        outputSummary: '10 recomendacoes',
+      }),
+      GENERATED_AT.toISOString(),
+    );
   });
 
   it('falls back to mock recommendations when the gateway fails', async () => {
@@ -212,11 +260,12 @@ describe('AiRecommendationService', () => {
     };
     const tasks = [createTask()];
     const boardTime = createSummary(tasks);
-    const summary = await setupService(
+    const { service, agentRunService } = setupService(
       provider,
       { ...DEFAULT_AGENT_GATEWAY_CONFIG, mode: 'http' },
       httpProvider,
-    ).recommendAsync(tasks, boardTime);
+    );
+    const summary = await service.recommendAsync(tasks, boardTime);
 
     expect(provider.recommend).toHaveBeenCalledOnce();
     expect(summary).toMatchObject({
@@ -229,5 +278,53 @@ describe('AiRecommendationService', () => {
         fallbackReason: 'Fallback mockado apos falha do gateway: Error: gateway indisponivel',
       },
     });
+    expect(agentRunService.completeRun).toHaveBeenCalledWith(
+      'run-id',
+      expect.objectContaining({
+        provider: 'mock',
+        fallbackReason: 'Fallback mockado apos falha do gateway: Error: gateway indisponivel',
+      }),
+      GENERATED_AT.toISOString(),
+    );
+  });
+
+  it('marks board recommendation runs as failed when the provider throws', async () => {
+    const provider = {
+      ...createProvider(),
+      recommend: vi.fn(() => {
+        throw new Error('provider falhou');
+      }),
+    };
+    const tasks = [createTask()];
+    const boardTime = createSummary(tasks);
+    const { service, agentRunService } = setupService(provider);
+
+    await expect(service.recommendAsync(tasks, boardTime)).rejects.toThrow('provider falhou');
+
+    expect(agentRunService.failRun).toHaveBeenCalledWith(
+      'run-id',
+      'provider falhou',
+      GENERATED_AT.toISOString(),
+    );
+  });
+
+  it('marks board recommendation runs as failed with a generic message for non-error failures', async () => {
+    const provider = {
+      ...createProvider(),
+      recommend: vi.fn(() => {
+        throw 'falha sem Error';
+      }),
+    };
+    const tasks = [createTask()];
+    const boardTime = createSummary(tasks);
+    const { service, agentRunService } = setupService(provider);
+
+    await expect(service.recommendAsync(tasks, boardTime)).rejects.toBe('falha sem Error');
+
+    expect(agentRunService.failRun).toHaveBeenCalledWith(
+      'run-id',
+      'Nao foi possivel recomendar acoes do board.',
+      GENERATED_AT.toISOString(),
+    );
   });
 });
