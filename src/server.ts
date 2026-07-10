@@ -19,6 +19,7 @@ import {
   TaskAnalysisRequest,
   TaskStatus,
 } from './app/core/models/task.model';
+import { resolveObservabilityConfig } from './app/core/models/observability.model';
 import { MockBoardRecommendationProvider } from './app/core/services/mock-board-recommendation.provider';
 import { MockTaskAnalysisProvider } from './app/core/services/mock-task-analysis.provider';
 import { OpenAiTaskAnalysisProvider } from './app/core/services/openai-task-analysis.provider';
@@ -34,6 +35,10 @@ const boardRecommendationProvider = new MockBoardRecommendationProvider();
 
 app.use('/api/agents', express.json({ limit: '1mb' }));
 app.use('/api/tasks', express.json({ limit: '1mb' }));
+
+app.get('/api/observability/config', (_req, res) => {
+  res.json(resolveObservabilityConfig(process.env));
+});
 
 app.get('/api/tasks', (_req, res) => {
   res.json({ tasks: taskStore.list() });
