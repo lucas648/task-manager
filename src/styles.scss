@@ -1179,6 +1179,58 @@ textarea:focus {
   line-height: 1.4;
 }
 
+.agent-run-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.agent-run-kpis span {
+  display: inline-grid;
+  place-items: center;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.agent-runs-panel li {
+  align-items: flex-start;
+  border-left: 4px solid var(--border-strong);
+  padding-left: 10px;
+}
+
+.agent-runs-panel li.running,
+.agent-runs-panel li.queued {
+  border-left-color: var(--primary);
+}
+
+.agent-runs-panel li.completed {
+  border-left-color: #067647;
+}
+
+.agent-runs-panel li.failed {
+  border-left-color: var(--danger);
+}
+
+.agent-runs-panel li div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.agent-runs-panel p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
 .workflow-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
@@ -1466,6 +1518,10 @@ textarea:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .agent-run-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .demo-users,
   .profile-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1529,6 +1585,7 @@ textarea:focus {
 
   .summary-strip,
   .analytics-summary,
+  .agent-run-kpis,
   .demo-users,
   .profile-summary,
   .segmented-control {

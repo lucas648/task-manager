@@ -9,6 +9,7 @@ import {
   TaskStatus,
 } from '../models/task.model';
 import { AGENT_GATEWAY_CONFIG } from './agent-gateway.service';
+import { AgentRunService } from './agent-run.service';
 import { AiReviewService } from './ai-review.service';
 import { CmsService } from './cms.service';
 import { TaskPayloadBuilderService } from './task-payload-builder.service';
@@ -51,6 +52,15 @@ function setupWorkflow(
       {
         provide: AGENT_GATEWAY_CONFIG,
         useValue: { ...DEFAULT_AGENT_GATEWAY_CONFIG, mode: 'mock' },
+      },
+      {
+        provide: AgentRunService,
+        useValue: {
+          queueRun: vi.fn(() => ({ id: 'agent-run-id' })),
+          startRun: vi.fn(),
+          completeRun: vi.fn(),
+          failRun: vi.fn(),
+        },
       },
       ...(providers ?? []),
     ],

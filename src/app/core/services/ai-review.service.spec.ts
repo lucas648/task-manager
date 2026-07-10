@@ -12,6 +12,7 @@ import {
   TaskStatus,
 } from '../models/task.model';
 import { TASK_ANALYSIS_PROVIDER } from './agent-provider.tokens';
+import { AgentRunService } from './agent-run.service';
 import { AGENT_GATEWAY_CONFIG, HttpTaskAnalysisProvider } from './agent-gateway.service';
 import { AiReviewService } from './ai-review.service';
 import { ChaosService } from './chaos.service';
@@ -41,7 +42,8 @@ function setupService(
   provider: TaskAnalysisProvider = createTaskAnalysisProvider(),
   gatewayConfig: AgentGatewayConfig = { ...DEFAULT_AGENT_GATEWAY_CONFIG, mode: 'mock' },
   httpProvider = createHttpTaskAnalysisProvider(),
-): AiReviewService {
+  agentRunService = createAgentRunService(),
+): { service: AiReviewService; agentRunService: ReturnType<typeof createAgentRunService> } {
   const enabled = new Set(enabledScenarios);
 
   TestBed.configureTestingModule({
@@ -56,6 +58,10 @@ function setupService(
         useValue: gatewayConfig,
       },
       {
+        provide: AgentRunService,
+        useValue: agentRunService,
+      },
+      {
         provide: HttpTaskAnalysisProvider,
         useValue: httpProvider,
       },
@@ -68,7 +74,10 @@ function setupService(
     ],
   });
 
-  return TestBed.inject(AiReviewService);
+  return {
+    service: TestBed.inject(AiReviewService),
+    agentRunService,
+  };
 }
 
 function createHttpTaskAnalysisProvider() {
@@ -121,6 +130,15 @@ function createTaskAnalysisProvider(): TaskAnalysisProvider {
   };
 }
 
+function createAgentRunService() {
+  return {
+    queueRun: vi.fn(() => ({ id: 'run-id' })),
+    startRun: vi.fn(),
+    completeRun: vi.fn(),
+    failRun: vi.fn(),
+  };
+}
+
 describe('AiReviewService', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
@@ -129,7 +147,8 @@ describe('AiReviewService', () => {
   it('delegates review to the configured mock task analysis provider', async () => {
     const provider = createTaskAnalysisProvider();
     const task = reviewTask();
-    const review = await setupService([], provider).review(task, REVIEWED_AT);
+    const { service, agentRunService } = setupService([], provider);
+    const review = await service.review(task, REVIEWED_AT);
 
     expect(provider.analyze).toHaveBeenCalledWith({
       task,
@@ -146,18 +165,41 @@ describe('AiReviewService', () => {
         score: 100,
       },
     });
+    expect(agentRunService.queueRun).toHaveBeenCalledWith(
+      {
+        agentId: AgentId.InitialTaskAnalysis,
+        operation: 'task_review',
+        provider: 'mock',
+        taskId: task.id,
+        taskTitle: task.title,
+        inputSummary: 'Revisar Bug',
+      },
+      REVIEWED_AT,
+    );
+    expect(agentRunService.startRun).toHaveBeenCalledWith('run-id', REVIEWED_AT);
+    expect(agentRunService.completeRun).toHaveBeenCalledWith(
+      'run-id',
+      {
+        provider: undefined,
+        outputSummary: 'fast analysis',
+        outputCount: 0,
+        fallbackReason: undefined,
+      },
+      REVIEWED_AT,
+    );
   });
 
   it('uses the gateway provider when HTTP mode is active', async () => {
     const provider = createTaskAnalysisProvider();
     const httpProvider = createHttpTaskAnalysisProvider();
     const task = reviewTask();
-    const review = await setupService(
+    const { service, agentRunService } = setupService(
       [],
       provider,
       { ...DEFAULT_AGENT_GATEWAY_CONFIG, mode: 'http' },
       httpProvider,
-    ).review(task, REVIEWED_AT);
+    );
+    const review = await service.review(task, REVIEWED_AT);
 
     expect(httpProvider.analyze).toHaveBeenCalledWith({
       task,
@@ -174,6 +216,20 @@ describe('AiReviewService', () => {
         provider: 'gateway',
       },
     });
+    expect(agentRunService.queueRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'gateway',
+      }),
+      REVIEWED_AT,
+    );
+    expect(agentRunService.completeRun).toHaveBeenCalledWith(
+      'run-id',
+      expect.objectContaining({
+        provider: 'gateway',
+        outputSummary: 'gateway analysis',
+      }),
+      REVIEWED_AT,
+    );
   });
 
   it('falls back to the mock provider when the gateway fails', async () => {
@@ -183,12 +239,13 @@ describe('AiReviewService', () => {
         throw new Error('gateway indisponivel');
       }),
     };
-    const review = await setupService(
+    const { service, agentRunService } = setupService(
       [],
       provider,
       { ...DEFAULT_AGENT_GATEWAY_CONFIG, mode: 'http' },
       httpProvider,
-    ).review(reviewTask(), REVIEWED_AT);
+    );
+    const review = await service.review(reviewTask(), REVIEWED_AT);
 
     expect(provider.analyze).toHaveBeenCalledOnce();
     expect(review).toMatchObject({
@@ -201,11 +258,22 @@ describe('AiReviewService', () => {
         fallbackReason: 'Fallback mockado apos falha do gateway: Error: gateway indisponivel',
       },
     });
+    expect(agentRunService.completeRun).toHaveBeenCalledWith(
+      'run-id',
+      expect.objectContaining({
+        provider: 'mock',
+        fallbackReason: 'Fallback mockado apos falha do gateway: Error: gateway indisponivel',
+      }),
+      REVIEWED_AT,
+    );
   });
 
   it('forwards the slow AI chaos context to the provider', async () => {
     const provider = createTaskAnalysisProvider();
-    const review = await setupService(['ai_slow'], provider).review(reviewTask(), REVIEWED_AT);
+    const review = await setupService(['ai_slow'], provider).service.review(
+      reviewTask(),
+      REVIEWED_AT,
+    );
 
     expect(provider.analyze).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -221,25 +289,49 @@ describe('AiReviewService', () => {
     const provider = createTaskAnalysisProvider();
 
     await expect(
-      setupService(['network_loss'], provider).review(reviewTask(), REVIEWED_AT),
+      setupService(['network_loss'], provider).service.review(reviewTask(), REVIEWED_AT),
     ).rejects.toThrow('Perda de conexao simulada durante revisao da IA.');
 
     TestBed.resetTestingModule();
     await expect(
-      setupService(['ai_unavailable'], provider).review(reviewTask(), REVIEWED_AT),
+      setupService(['ai_unavailable'], provider).service.review(reviewTask(), REVIEWED_AT),
     ).rejects.toThrow('IA fora do ar no cenario de caos.');
 
     TestBed.resetTestingModule();
-    await expect(
-      setupService(['ai_invalid_response'], provider).review(reviewTask(), REVIEWED_AT),
-    ).rejects.toThrow('Resposta invalida da IA no cenario de caos.');
+    const { service, agentRunService } = setupService(['ai_invalid_response'], provider);
+    await expect(service.review(reviewTask(), REVIEWED_AT)).rejects.toThrow(
+      'Resposta invalida da IA no cenario de caos.',
+    );
 
     expect(provider.analyze).not.toHaveBeenCalled();
+    expect(agentRunService.failRun).toHaveBeenCalledWith(
+      'run-id',
+      'Resposta invalida da IA no cenario de caos.',
+      REVIEWED_AT,
+    );
+  });
+
+  it('marks runs as failed with a generic message for non-error provider failures', async () => {
+    const provider = {
+      ...createTaskAnalysisProvider(),
+      analyze: vi.fn(() => {
+        throw 'falha sem Error';
+      }),
+    };
+    const { service, agentRunService } = setupService([], provider);
+
+    await expect(service.review(reviewTask(), REVIEWED_AT)).rejects.toBe('falha sem Error');
+
+    expect(agentRunService.failRun).toHaveBeenCalledWith(
+      'run-id',
+      'Nao foi possivel concluir a revisao da IA.',
+      REVIEWED_AT,
+    );
   });
 
   it('allows a direct mock review for synchronous consumers', () => {
     const provider = createTaskAnalysisProvider();
-    const review = setupService([], provider).reviewWithMock(reviewTask(), REVIEWED_AT);
+    const review = setupService([], provider).service.reviewWithMock(reviewTask(), REVIEWED_AT);
 
     expect(review.summary).toBe('fast analysis');
     expect(provider.analyze).toHaveBeenCalledOnce();

@@ -1,6 +1,6 @@
 # TaskFlow AI
 
-TaskFlow AI e um task manager inteligente construido em Angular para demonstrar um fluxo enterprise de tarefas com revisao assistida por IA, aprovacao humana, geracao de payload, simulacao de CMS, observabilidade e chaos engineering.
+TaskFlow AI e um task manager inteligente construido em Angular para demonstrar um fluxo enterprise de tarefas com revisao assistida por IA, recomendacoes operacionais, aprovacao humana, geracao de payload, simulacao de CMS, observabilidade, autenticacao local e chaos engineering.
 
 O projeto nasceu como `cms-ai-portal`, mas foi reestruturado em fases para virar uma plataforma de estudo e portfolio tecnico.
 
@@ -21,13 +21,15 @@ As imagens abaixo sao geradas a partir do app local durante a fase final de poli
 - Criacao de tasks enriquecidas com prioridade, categoria, tags, responsavel, prazo e criterios de aceite.
 - Persistencia encapsulada por repository, com `localStorage` no frontend e API backend de tasks.
 - Autenticacao local de desenvolvimento com sessao persistida, guards de rotas e tela de perfil.
+- Historico de runs dos agentes com status, duracao, fallback e falhas no Analytics.
 - Workflow principal: `Draft -> AI Reviewed -> Approved -> Published -> In Progress -> Completed`.
-- Revisao por IA via Agent Gateway no backend, com fallback mockado.
+- Revisao inicial por IA via Agent Gateway no backend, com OpenAI quando configurado e fallback mockado.
+- Recomendacoes do Board Advisor a partir das tasks e metricas de tempo por baia.
 - Aplicacao ou rejeicao individual de sugestoes.
 - Aprovacao humana e geracao de payload JSON.
 - Simulacao de envio para CMS/backend com sucesso e falhas controladas.
 - Chaos Dashboard para ativar cenarios de falha de IA, CMS e rede.
-- Analytics Dashboard com metricas de status, falhas, sugestoes e tempo ate aprovacao.
+- Analytics Dashboard com metricas de status, falhas, sugestoes, tempo ate aprovacao, tempo por baia e runs de agentes.
 - Kanban com Angular CDK Drag and Drop e audit log de movimentacao.
 - Dark mode e light mode com preferencia persistida no navegador.
 - Cobertura de testes unitarios em 100%.
@@ -55,6 +57,8 @@ src/app/
   features/
     analytics-dashboard/
     chaos-dashboard/
+    login/
+    profile/
     home/
     task-create/
     task-list/
@@ -68,8 +72,13 @@ Principais services:
 - `TaskApiClient`: client HTTP para a API backend de tasks.
 - `AuthService`: sessao local, login, logout e atualizacao de perfil.
 - `authGuard` e `guestGuard`: protecao das rotas autenticadas e da rota de login.
+- `AgentRunService`: fila/historico local de execucoes dos agentes.
+- `AgentGatewayClient`: client HTTP para contratos, analise inicial e recomendacoes do board.
 - `AuditLogService`: criacao padronizada de logs.
-- `AiReviewService`: simulacao de revisao por IA.
+- `AiReviewService`: revisao inicial por IA com provider mockado ou gateway HTTP.
+- `AiRecommendationService`: recomendacoes operacionais do Board Advisor.
+- `BoardAnalyticsService`: metricas deterministicas de tempo por baia.
+- `MockTaskAnalysisProvider` e `MockBoardRecommendationProvider`: providers locais para desenvolvimento e fallback.
 - `OpenAiTaskAnalysisProvider`: integracao backend com OpenAI Responses API para a analise inicial.
 - `TaskWorkflowService`: orquestracao do fluxo de negocio.
 - `TaskPayloadBuilderService`: criacao do payload final.
@@ -127,6 +136,13 @@ TASKFLOW_TASKS_FILE=.taskflow/tasks.json npm run start
 
 Quando `TASKFLOW_TASKS_FILE` nao e informado, a API usa `.taskflow/tasks.json` no diretorio do projeto.
 
+Rodar a versao SSR depois do build:
+
+```bash
+npm run build
+npm run serve:ssr:cms-ai-portal
+```
+
 Perfis demo:
 
 | Perfil        | E-mail                  | Senha       |
@@ -145,6 +161,16 @@ Perfis demo:
 | `PATCH`  | `/api/tasks/:taskId`        | Atualiza campos de uma task   |
 | `PATCH`  | `/api/tasks/:taskId/status` | Atualiza o status de uma task |
 | `DELETE` | `/api/tasks/:taskId`        | Remove uma task               |
+
+## API de agentes
+
+| Metodo | Endpoint                            | Uso                                       |
+| ------ | ----------------------------------- | ----------------------------------------- |
+| `GET`  | `/api/agents/contracts`             | Retorna contratos e modo atual do gateway |
+| `POST` | `/api/agents/task-analysis`         | Executa analise inicial da task           |
+| `POST` | `/api/agents/board-recommendations` | Gera recomendacoes operacionais do board  |
+
+Quando `OPENAI_API_KEY` esta configurada, `/api/agents/task-analysis` tenta usar OpenAI. Se a chave estiver ausente ou a chamada falhar, o gateway retorna fallback mockado para manter o app funcional localmente. As recomendacoes do board seguem deterministicas nesta versao.
 
 Validar TypeScript dos testes:
 
@@ -188,15 +214,39 @@ O projeto usa a configuracao de testes do Angular com Vitest e thresholds de cob
 - Fase 11: Agent Gateway seguro.
 - Fase 12: providers HTTP com fallback.
 - Fase 13: integracao OpenAI no backend para analise inicial.
+- Fase 14: Board Advisor exposto pelo backend via Agent Gateway.
 - Fase 15: repository de tasks e API backend de persistencia.
 - Fase 16: autenticacao local, guards e perfil de usuario.
+- Fase 17: execucoes assincronas observaveis dos agentes com historico de runs.
+
+## Estado atual
+
+A reestruturacao planejada ate a Fase 17 esta concluida. O projeto esta pronto para commit quando as validacoes abaixo passarem localmente:
+
+```bash
+npx tsc -p tsconfig.spec.json --noEmit
+npm run test:coverage
+npm run build
+```
+
+Na ultima validacao da Fase 17, todos os testes passaram com 100% de cobertura.
 
 ## Decisoes tecnicas
 
 - `localStorage` segue como repository ativo do frontend nesta versao, agora isolado por `TaskRepository`.
 - Autenticacao tambem usa `localStorage` nesta fase para manter o app autocontido; backend auth real fica preparado para uma fase posterior.
+- Runs de agentes tambem ficam em `localStorage` nesta fase; a estrutura ja separa status e metadata para uma fila backend futura.
 - A API backend de tasks persiste em JSON local para preparar a troca futura para banco de dados sem reescrever componentes.
 - IA usa gateway backend com OpenAI quando `OPENAI_API_KEY` esta disponivel; sem chave ou em falha, cai para mocks para manter o projeto autocontido.
+- O Board Advisor segue deterministico nesta versao para preservar previsibilidade, testes fortes e fallback simples.
 - Angular CDK e usado apenas onde ha ganho real de interacao: Kanban drag and drop.
 - A aplicacao prioriza componentes standalone e services pequenos.
 - A UI segue uma linguagem operacional, focada em leitura rapida, status e acoes recorrentes.
+
+## Proximas evolucoes possiveis
+
+- Persistir tasks, usuarios, sessoes, auditoria e runs de agentes em banco real.
+- Criar fila backend real para execucoes assincronas dos agentes.
+- Implementar permissoes por perfil/time no backend.
+- Integrar envio CMS real.
+- Adicionar monitoramento externo e deploy.
