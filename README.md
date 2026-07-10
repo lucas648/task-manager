@@ -22,6 +22,7 @@ As imagens abaixo sao geradas a partir do app local durante a fase final de poli
 - Persistencia encapsulada por repository, com `localStorage` no frontend e API backend de tasks.
 - Autenticacao local de desenvolvimento com sessao persistida, guards de rotas e tela de perfil.
 - Historico de runs dos agentes com status, duracao, fallback e falhas no Analytics.
+- Base de observabilidade para Datadog com configuracao publica, taxonomia de tags e eventos locais.
 - Workflow principal: `Draft -> AI Reviewed -> Approved -> Published -> In Progress -> Completed`.
 - Revisao inicial por IA via Agent Gateway no backend, com OpenAI quando configurado e fallback mockado.
 - Recomendacoes do Board Advisor a partir das tasks e metricas de tempo por baia.
@@ -74,6 +75,7 @@ Principais services:
 - `authGuard` e `guestGuard`: protecao das rotas autenticadas e da rota de login.
 - `AgentRunService`: fila/historico local de execucoes dos agentes.
 - `AgentGatewayClient`: client HTTP para contratos, analise inicial e recomendacoes do board.
+- `ObservabilityService`: base de tagueamento e eventos locais para Datadog RUM/APM.
 - `AuditLogService`: criacao padronizada de logs.
 - `AiReviewService`: revisao inicial por IA com provider mockado ou gateway HTTP.
 - `AiRecommendationService`: recomendacoes operacionais do Board Advisor.
@@ -136,6 +138,21 @@ TASKFLOW_TASKS_FILE=.taskflow/tasks.json npm run start
 
 Quando `TASKFLOW_TASKS_FILE` nao e informado, a API usa `.taskflow/tasks.json` no diretorio do projeto.
 
+Variaveis de observabilidade:
+
+```bash
+DATADOG_ENABLED=true
+DD_ENV=local
+DD_SERVICE=taskflow-ai
+DD_VERSION=dev
+DD_SITE=datadoghq.com
+DD_RUM_APPLICATION_ID=...
+DD_RUM_CLIENT_TOKEN=...
+DD_RUM_SESSION_SAMPLE_RATE=100
+DD_RUM_REPLAY_SAMPLE_RATE=0
+DD_TRACE_SAMPLE_RATE=100
+```
+
 Rodar a versao SSR depois do build:
 
 ```bash
@@ -171,6 +188,14 @@ Perfis demo:
 | `POST` | `/api/agents/board-recommendations` | Gera recomendacoes operacionais do board  |
 
 Quando `OPENAI_API_KEY` esta configurada, `/api/agents/task-analysis` tenta usar OpenAI. Se a chave estiver ausente ou a chamada falhar, o gateway retorna fallback mockado para manter o app funcional localmente. As recomendacoes do board seguem deterministicas nesta versao.
+
+## API de observabilidade
+
+| Metodo | Endpoint                    | Uso                                     |
+| ------ | --------------------------- | --------------------------------------- |
+| `GET`  | `/api/observability/config` | Retorna configuracao publica do Datadog |
+
+Nesta fase, a aplicacao ainda nao inicializa SDKs do Datadog nem envia telemetria externa. O endpoint e o `ObservabilityService` apenas preparam configuracao, tags padronizadas e eventos locais para as proximas fases.
 
 Validar TypeScript dos testes:
 
@@ -218,10 +243,11 @@ O projeto usa a configuracao de testes do Angular com Vitest e thresholds de cob
 - Fase 15: repository de tasks e API backend de persistencia.
 - Fase 16: autenticacao local, guards e perfil de usuario.
 - Fase 17: execucoes assincronas observaveis dos agentes com historico de runs.
+- Fase 18: base de observabilidade Datadog, configuracao publica e taxonomia de tags.
 
 ## Estado atual
 
-A reestruturacao planejada ate a Fase 17 esta concluida. O projeto esta pronto para commit quando as validacoes abaixo passarem localmente:
+A reestruturacao planejada ate a Fase 18 esta concluida. O projeto esta pronto para commit quando as validacoes abaixo passarem localmente:
 
 ```bash
 npx tsc -p tsconfig.spec.json --noEmit
@@ -229,7 +255,7 @@ npm run test:coverage
 npm run build
 ```
 
-Na ultima validacao da Fase 17, todos os testes passaram com 100% de cobertura.
+Na ultima validacao da Fase 18, todos os testes passaram com 100% de cobertura.
 
 ## Decisoes tecnicas
 
@@ -239,6 +265,7 @@ Na ultima validacao da Fase 17, todos os testes passaram com 100% de cobertura.
 - A API backend de tasks persiste em JSON local para preparar a troca futura para banco de dados sem reescrever componentes.
 - IA usa gateway backend com OpenAI quando `OPENAI_API_KEY` esta disponivel; sem chave ou em falha, cai para mocks para manter o projeto autocontido.
 - O Board Advisor segue deterministico nesta versao para preservar previsibilidade, testes fortes e fallback simples.
+- Tags de baixa cardinalidade ficam padronizadas no `ObservabilityService`; identificadores como `correlation_id`, `task_id`, `user_id` e `agent_run_id` ficam como atributos.
 - Angular CDK e usado apenas onde ha ganho real de interacao: Kanban drag and drop.
 - A aplicacao prioriza componentes standalone e services pequenos.
 - A UI segue uma linguagem operacional, focada em leitura rapida, status e acoes recorrentes.
